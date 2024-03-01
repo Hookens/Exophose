@@ -1,408 +1,128 @@
-import asyncio
-from datetime import datetime
 from discord.bot import Bot
 from discord.ext import commands
-import mysql.connector
-from mysql.connector.connection import MySQLConnection
-from mysql.connector.cursor import CursorBase
+from mysql import connector
+import os
 
-EXODB: MySQLConnection = None
-LASTCONNECT: datetime = datetime.now().timestamp() - 1000
+from Utilities.datahelpers import ExoRole, CreatedRole, AllowedRole
 
-HST = 'YOUR DATABASE HOST'
-USR = 'YOUR DATABASE USER'
-PWD = 'YOUR DATABASE PASSWORD'
+HOST = os.getenv('DATABASE_HST')
+USER = os.getenv('DATABASE_USR')
+PASSWORD = os.getenv('DATABASE_PWD')
+DATABASE = USER
+
+DB_CONFIG = {
+    'host': HOST,
+    'user': USER,
+    'password': PASSWORD,
+    'database': DATABASE,
+}
+
 
 class Data(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         
-    async def reconnect(self) -> bool:
-        global EXODB
-        global LASTCONNECT
+    def _get_db_connection(self):
+        return connector.connect(**DB_CONFIG)
+    
+    async def _log_sql_event(self, event: str, type: str):
+        if (logging := self.bot.get_cog("Logging")) is not None:
+            await logging.log_event(event, type)
+    
+    async def _log_sql_error(self, e: Exception, method: str, *args):
+        if (logging := self.bot.get_cog("Logging")) is not None:
+            await logging.log_error("'SQLError'", f"Data - {method}", e, *args)
+
+    async def _execute_write_operation(self, proc_name: str, *args) -> bool:
         try:
-            if EXODB is not None:
-                EXODB.close()
-            EXODB = mysql.connector.connect(host=HST, user=USR, password=PWD, database=USR)
-            LASTCONNECT = datetime.now().timestamp()
-            return True
+            with self._get_db_connection() as connection:
+                with connection.cursor() as cursor:
+                    cursor.callproc(proc_name, args)
+                    connection.commit()
+                    return True
+                
         except Exception as e:
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_sql_error(error=e, function='SQL - reconnect')
+            await self._log_sql_error(e, proc_name, *args)
             return False
 
-    async def add_exophose_role(self, roleid: str, guildid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        msg: str = f"Exophose was added to guild '{guildid}'"
-        if roleid == '0':
-            msg += " without a role."
-        else:
-            msg += f" with role '{roleid}'."
-        logging = self.bot.get_cog("Logging")
-        if logging is not None:
-            await logging.log_event(msg, "INFO")
-
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                insertsql = "INSERT INTO ExophoseRole (roleid, guildid) VALUES (%s, %s)"
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.execute(insertsql, (roleid,guildid))
-                DBCURSOR.close()
-                EXODB.commit()
+    async def _execute_read_operation(self, proc_name: str, *args):
+        try:
+            with self._get_db_connection() as connection:
+                with connection.cursor() as cursor:
+                    cursor.callproc(proc_name, args)
+                    for result in cursor.stored_results():
+                        allowed_roles=result.fetchall()
+                    return allowed_roles
                 
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - add_exophose_role', roleid=roleid, guildid=guildid)
-                await asyncio.sleep(4)
-            break
-        return False
+        except Exception as e:
+            await self._log_sql_error(e, proc_name, *args)
+            return None
 
-    async def add_allowed_role(self, roleid: str, guildid: str, userid: str, maxroles, allowbadges) -> bool:
-        global EXODB
-        global LASTCONNECT
-        logging = self.bot.get_cog("Logging")
-        if logging is not None:
-            await logging.log_event(f"User '{userid}' allowed role '{roleid}' in guild '{guildid}' to create '{maxroles}' roles {'with' if allowbadges else 'without'} badges.", "INFO")
+    async def add_server(self, role_id: int, guild_id: int) -> bool:
+        await self._log_sql_event(f"'{guild_id}' added with '{role_id}'", "INFO")
+        return await self._execute_write_operation("ExoAddServer", role_id, guild_id)
 
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
+    async def add_allowed_role(self, role_id: int, guild_id: int, user_id: int, max_roles:int, allow_badges: bool) -> bool:
+        await self._log_sql_event(f"'{user_id}' from '{guild_id}' allowed '{role_id}' ({max_roles}, {allow_badges})", "INFO")
+        return await self._execute_write_operation("ExoAddAllowedRole", role_id, guild_id, user_id, max_roles, allow_badges)
 
-        while True:
-            try:
-                insertsql = "INSERT INTO AllowedRoles (roleid, guildid, userid, maxroles, allowbadges) VALUES (%s, %s, %s, %s, %s)"
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.execute(insertsql, (roleid, guildid, userid, maxroles, allowbadges))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - add_allowed_role', roleid=roleid, guildid=guildid, userid=userid)
-                await asyncio.sleep(4)
-            break
-        return False
-        
-    async def update_allowed_role(self, guildid: str, roleid: str, userid: str, maxroles, allowbadges) -> bool:
-        global EXODB
-        global LASTCONNECT
-        logging = self.bot.get_cog("Logging")
-        if logging is not None:
-            escaped = "\'"
-            await logging.log_event(f"User '{userid}' updated allowed role '{roleid}' to now create {f'{escaped}{maxroles}{escaped} ' if maxroles > 0 else ''}roles {'with' if allowbadges else 'without'} badges in guild {guildid}.", "INFO")
-
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("UpdateAllowedRole", (guildid, roleid, userid, maxroles, allowbadges))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - update_allowed_role', guildid=guildid, roleid=roleid, userid=userid)
-                await asyncio.sleep(4)
-            break
-        return False
-
-    async def add_created_role(self, roleid: str, guildid: str, userid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        logging = self.bot.get_cog("Logging")
-        if logging is not None:
-            await logging.log_event(f"User '{userid}' created role '{roleid}' in guild '{guildid}'.", "INFO")
-
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                insertsql = "INSERT INTO CreatedRoles (roleid, guildid, userid) VALUES (%s, %s, %s)" 
-                DBCURSOR: CursorBase =EXODB.cursor()
-                DBCURSOR.execute(insertsql, (roleid,guildid,userid))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - add_created_role', roleid=roleid, guildid=guildid, userid=userid)
-                await asyncio.sleep(4)
-            break
-        return False
-
-    async def get_exophose_role_by_guild(self, guildid: str) -> int:
-        global EXODB
-        global LASTCONNECT
-
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return 0
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("GetExophoseRoleByGuild", (guildid,))
-                for result in DBCURSOR.stored_results():
-                    guildexophoserole=result.fetchall()
-                DBCURSOR.close()
-                
-                if guildexophoserole != []:
-                    return int(guildexophoserole[0][0])
-                else: 
-                    return 0
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - get_exophose_role_by_guild', guildid=guildid)
-                await asyncio.sleep(4)
-            break
-        return 0
-
-    async def get_allowed_roles_by_guild(self, guildid: str):
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return None
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("GetAllowedRolesByGuild", (guildid,))
-                for result in DBCURSOR.stored_results():
-                    guildallowedroles=result.fetchall()
-                DBCURSOR.close()
-                
-                return guildallowedroles
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - get_allowed_roles_by_guild', guildid=guildid)
-                await asyncio.sleep(4)
-            break
-        return None
-
-    async def get_created_roles_by_guild_by_user(self, guildid: str, userid: str):
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("GetCreatedRolesByGuildByUser", (guildid,userid))
-                for result in DBCURSOR.stored_results():
-                    usercreatedroles=result.fetchall()
-                DBCURSOR.close()
-                
-                return usercreatedroles
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - get_created_roles_by_guild_by_user', guildid=guildid, userid=userid)
-                await asyncio.sleep(4)
-            break
-        return None
-
-    async def delete_exophose_role_by_guild(self, guildid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("DeleteExophoseRoleByGuild", (guildid,))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - delete_exophose_role_by_guild', guildid=guildid)
-                await asyncio.sleep(4)
-            break
-        return False
-
-    async def delete_allowed_role_by_role(self, roleid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("DeleteAllowedRoleByRole", (roleid,))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - delete_allowed_role_by_role', roleid=roleid)
-                await asyncio.sleep(4)
-            break
-        return False
-
-    async def delete_allowed_roles_by_guild(self, guildid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("DeleteAllowedRolesByGuild", (guildid,))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - delete_allowed_roles_by_guild', guildid=guildid)
-                await asyncio.sleep(4)
-            break
-        return False
-
-    async def delete_created_role_by_role(self, roleid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("DeleteCreatedRoleByRole", (roleid,))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - delete_created_role_by_role', roleid=roleid)
-                await asyncio.sleep(4)
-            break
-        return False
-
-    async def delete_created_roles_by_guild(self, guildid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("DeleteCreatedRolesByGuild", (guildid,))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - delete_created_roles_by_guild', guildid=guildid)
-                await asyncio.sleep(4)
-            break
-        return False
-
-    async def delete_created_roles_by_guild_by_user(self, guildid: str, userid: str) -> bool:
-        global EXODB
-        global LASTCONNECT
-        if datetime.now().timestamp() - LASTCONNECT > 300:
-            if not await self.reconnect():
-                return False
-
-        while True:
-            try:
-                DBCURSOR: CursorBase = EXODB.cursor()
-                DBCURSOR.callproc("DeleteCreatedRolesByGuildByUser", (guildid,userid))
-                DBCURSOR.close()
-                EXODB.commit()
-                
-                return True
-            except Exception as e:
-                if datetime.now().timestamp() - LASTCONNECT > 10:
-                    if await self.reconnect():
-                        continue
-                logging = self.bot.get_cog("Logging")
-                if logging is not None:
-                    await logging.log_sql_error(error=e, function='SQL - delete_created_roles_by_guild_by_user', guildid=guildid)
-                await asyncio.sleep(4)
-            break
-        return False
+    async def add_member_role(self, role_id: int, guild_id: int, user_id: int) -> bool:
+        await self._log_sql_event(f"'{user_id}' from '{guild_id}' created '{role_id}'", "INFO")
+        return await self._execute_write_operation("ExoAddMemberRole", role_id, guild_id, user_id)
     
+    async def is_allowed_role(self, role_id: int) -> bool:
+        return bool((await self._execute_read_operation("ExoIsAllowedRole", role_id))[0][0])
+    
+    async def is_member_role(self, role_id: int) -> bool:
+        return bool((await self._execute_read_operation("ExoIsMemberRole", role_id))[0][0])
+    
+    async def count_member_roles(self, guild_id: int, user_id: int) -> int:
+        return int((await self._execute_read_operation("ExoCountMemberRoles", guild_id, user_id))[0][0])
 
+    async def get_server(self, guild_id: int) -> ExoRole:
+        result = await self._execute_read_operation("ExoGetServer", guild_id)
+        return ExoRole(
+            id=result[0][0],
+            guild_id=result[0][1]
+            ) if result is not None else None
 
+    async def get_allowed_roles(self, guild_id: int) -> list[AllowedRole]:
+        result = await self._execute_read_operation("ExoGetAllowedRoles", guild_id)
+        return [AllowedRole(
+            id=row[0],
+            guild_id=row[1],
+            user_id=row[2],
+            max_roles=row[3],
+            allow_badges=row[7],
+            created_date=row[4],
+            updated_user_id=row[5],
+            updated_date=row[6]
+            ) for row in result] if result is not None else None
+
+    async def get_member_roles(self, guild_id: int, user_id: int) -> list[CreatedRole]:
+        result = await self._execute_read_operation("ExoGetMemberRoles", guild_id, user_id)
+        return [CreatedRole(
+            id=row[0],
+            guild_id=row[1],
+            user_id=row[2],
+            created_date=row[3],
+            ) for row in result] if result is not None else None
+
+    async def delete_server(self, guild_id: int) -> bool:
+        await self._log_sql_event(f"Removed from '{guild_id}'", "INFO")
+        return await self._execute_write_operation("ExoDeleteServer", guild_id)
+
+    async def delete_allowed_role(self, role_id: int) -> bool:
+        await self._log_sql_event(f"Removed allowed '{role_id}'", "INFO")
+        return await self._execute_write_operation("ExoDeleteAllowedRole", role_id)
+
+    async def delete_member_role(self, role_id: int) -> bool:
+        await self._log_sql_event(f"Removed created '{role_id}'", "INFO")
+        return await self._execute_write_operation("ExoDeleteMemberRole", role_id)
+
+    async def delete_member_roles(self, guild_id: int, user_id: int) -> bool:
+        await self._log_sql_event(f"Removed '{user_id}' from '{guild_id}'", "INFO")
+        return await self._execute_write_operation("ExoDeleteMemberRoles", guild_id, user_id)
+    
 def setup(bot):
     bot.add_cog(Data(bot))

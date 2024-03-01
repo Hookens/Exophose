@@ -1,210 +1,203 @@
-from discord import Message, TextChannel
+import os
+from discord import Message
 from discord.bot import Bot
 from discord.embeds import Embed
 from discord.ext import commands
 from discord.member import Member
 from discord.role import Role
-from enum import Enum
 from discord.file import File
 from PIL import Image, ImageDraw, ImageFilter
 import requests
-import traceback
 
-class Permission(Enum):
-    manageroles = 0
-    sendmessage = 1
-    embedlinks = 2
+from Debug.debughelpers import try_func_async
+from Utilities.datahelpers import AllowedRole, CreatedRole
+
+WHITE = 0xFFFFFF
+GREEN = 0x00CC00
+RED = 0xCC0000
+
+TEMP_IMG_CHANNEL = 1027991803540025454
 
 class Embeds(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def generate_embed(self, title: str, content: str, color: int = 0xCC0000) -> Embed :
-        embed: Embed
-        try:
-            embed = Embed(title=title, description=content, colour=color)
-
-        except Exception as e:
-            embed = await self.generate_embed_unexpected_error()
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'embeds - generate_embed', traceback.format_exc(), title, content, color)
-
-        return embed
-
-    async def generate_embed_args_error(self, command: str, argcount: int) -> Embed :
-        return await self.generate_embed("Missing arguments", f"Command '{command}' requires a minimum of {argcount} extra arguments.")
-
-    async def generate_embed_int_parsing_error(self, string: str) -> Embed:
-        return await self.generate_embed("Parsing error", f"Exophose cannot parse '{string}' as it is not a valid number.")
-
-    async def generate_embed_color_parsing_error(self, rolecolor: str) -> Embed :
-        return await self.generate_embed("Parsing error", f"Exophose cannot parse color '{rolecolor}' as it is either not a hexadecimal number or not between #000000 and #FFFFFF.")
-
-    async def generate_embed_unexpected_error(self) -> Embed :
-        return await self.generate_embed("Unexpected Error", f"Exophose encountered an unexpected error.")
-
-    async def generate_embed_unexpected_sql_error(self) -> Embed :
-        return await self.generate_embed("Unexpected SQL Error", f"Exophose encountered an unexpected error with the SQL database. Impossible to complete this action at the moment. This may highly be due to the SQL server being under maintenance. I have no control over this.")
-
-    async def generate_embed_forbidden_error(self) -> Embed :
-        return await self.generate_embed("403 Forbidden", f"Exophose encountered a forbidden error while trying to edit a role. Make sure it was not moved above the bot's role.")
-
-    async def generate_embed_allowed_roles(self, guildid: str) -> Embed :
-        embed: Embed
-        try:
-            data = self.bot.get_cog("Data")
-            if data is not None:
-                guildallowedroles = await data.get_allowed_roles_by_guild(guildid)
-
-                if len(guildallowedroles) > 0 :
-                    embed = Embed(title="Allowed Roles", description="Here is a list of the allowed roles in your guild.", colour=0xFFFFFF)
-
-                    for row in guildallowedroles:
-                        numroles: int = row[4]
-                        badgeallowed: bool = row[8]
-                        newline = "\n"
-                        embed.add_field(name=f"\u200b", value=f"{f'<@&{row[1]}>' if row[1] != row[2] else '**everyone**'}  |  Can create **{numroles}** role{'s' if numroles > 1 else ''}  |  **Can{'' if badgeallowed else 'not'}** add custom badges{newline}Allowed by <@{row[3]}> on **<t:{int(row[5].timestamp())}>**{'' if row[6] is None else f'{newline}Last update by <@{row[6]}> on **<t:{int(row[7].timestamp())}>**'}", inline=False)
-                else :
-                    embed = Embed(title="Allowed Roles", description="Your guild has no allowed roles.", colour=0xFFFFFF)
-            
-        except Exception as e:
-            embed = await self.generate_embed_unexpected_error()
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'embeds - generate_embed_allowed_roles', traceback.format_exc())
+    def _get_cogs(self, include_data: bool = False, include_utilities: bool = False) -> tuple:
+        data = self.bot.get_cog("Data") if include_data else None
+        utilities = self.bot.get_cog("Utilities") if include_utilities else None
         
-        return embed
-
-    async def generate_embed_missing_permissions(self, *permissions: Permission) -> Embed :
-        message = "Exophose requires "
-
-        for permission in permissions:
-            if permission == Permission.manageroles:
-                message += "`Manage_Roles` "
-            elif permission == Permission.sendmessage:
-                message += "`Send_message` "
-            else:
-                message += "`Embed_Links` "
-
-        message += "permission(s) to run that command. Make sure they are on the role itself."
-
-        return await self.generate_embed("Permission Error", message)
-
-    async def generate_embed_created_roles(self, member: Member) -> Embed :
-        embed: Embed
-        try:
-            data = self.bot.get_cog("Data")
-            if data is not None:
-                usercreatedroles = await data.get_created_roles_by_guild_by_user(member.guild.id, member.id)
-
-                if len(usercreatedroles) > 0 :
-                    embed = Embed(title="Created Roles", description=f"Here is a list of the created roles for {member.mention}.", colour=0xFFFFFF)
-
-                    index: int = 0
-                    for row in usercreatedroles:
-                        role: Role = member.guild.get_role((int)(row[1]))
-                        newline = "\n"
-                        embed.add_field(name=f"\u200b", value=f"Index: `{index}`  |  <@&{row[1]}>  |  Color: `#{hex(role.colour.value)[2:]}`{'' if role.icon is None or role.icon.url is None else f'  |  [View badge]({role.icon.url})'}{newline}Created on **<t:{int(row[4].timestamp())}>**", inline=False)
-                        index += 1
-                else :
-                    embed = Embed(title="Created Roles", description=f"{member.mention} has not created any roles.", colour=0xFFFFFF)
-            
-        except Exception as e:
-            embed = await self.generate_embed_unexpected_error()
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'embeds - generate_embed_created_roles', traceback.format_exc())
-
-        return embed
-
-    async def generate_embed_preview_color(self, member: Member, color: str) -> Embed:
-
-        embed: Embed = None
-        file: str = ""
-        hexcolor = None
-            
-        try:
-            utilities = self.bot.get_cog("Utilities")
-            if utilities is not None:
-                if color is not None:
-                    hexcolor = await utilities.parse_color(color)
-                if hexcolor is not None:
-                    hexstrcolor : str = "{0:#0{1}x}".format(hexcolor, 8)[2:]
-                    embed = await self.generate_embed(f"Color preview for #{hexstrcolor}", "If you want to preview other colors, you can use an [online color picker](https://g.co/kgs/Ye7sc5). Make sure to use the hexadecimal value.", hexcolor)
-                    
-
-                    img = Image.new('RGB', (300, 300), tuple(int(hexstrcolor[i:i+2], 16) for i in (0, 2, 4)))
-
-                    avatarpath: str = ""
-                    if member.avatar is not None:
-                        avatarpath = member.avatar.url
-                        if member.guild_avatar is not None:
-                            avatarpath = member.guild_avatar.url
-                        
-                        avatarpath256 = avatarpath.replace("size=1024", "size=256")
-                        pfp = Image.open(requests.get(avatarpath256, stream=True).raw)
-                        mask = Image.new("L", pfp.size, 0)
-                        draw = ImageDraw.Draw(mask)
-                        draw.ellipse((0, 0, 255, 255), fill=255)
-                        img.paste(pfp, (22, 22), mask.filter(ImageFilter.GaussianBlur(3)))
-                    
-                    file = f"./temp/{member.id}_{hex(hexcolor)[2:]}.jpg"
-                    img.save(file, quality=100)
-
-                    imagechannel: TextChannel = self.bot.get_channel("YOUR TEMPORARY IMAGE CREATION CHANNEL")
-                    message: Message = await imagechannel.send(file=File(file))
-
-                    embed.set_thumbnail(url=message.attachments[0].url)
-
-                    await message.delete()
-
-                else:
-                    embed = await self.generate_embed("Color preview", "To preview colors, you can use an [online color picker](https://g.co/kgs/Ye7sc5). Make sure to use the hexadecimal value.", 0xFFFFFF)
-                
-        except Exception as e:
-            embed = await self.generate_embed_unexpected_error()
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'embeds - generate_embed_preview_color', traceback.format_exc())
+        if ((data is None and include_data) or 
+            (utilities is None and include_utilities)):
+            raise(ValueError("One or more cogs are missing.", data, utilities))
         
+        return tuple(filter(None, (data, utilities)))
+
+    def generate_embed(self, title: str, description: str, color: int = RED, image: str = None, footer: str = None, **kwargs) -> Embed:
+        embed = Embed(title=title, description=description, colour=color)
+        if image is not None:
+            embed.set_thumbnail(url=image)
+        if footer is not None:
+            embed.set_footer(text=footer)
+            
+        for key, value in kwargs.items():
+            embed.add_field(name=key, value=value, inline=False)
+
         return embed
 
-    async def generate_embed_missing_index(self) -> Embed:
-        return await self.generate_embed("Missing index", f"No index was provided. If you wish to remove all of your custom roles at once, use /remove `index:`all.")
+    def blacklisted_word(self) -> Embed:
+        return self.generate_embed("Blacklisted Word", "The role must not contain profane or offensive words.")
 
-    async def generate_embed_not_admin_allowed(self) -> Embed :
-        return await self.generate_embed("User not allowed", "You are not allowed to use this command as you do not have administrator permissions.")
+    def creation_success(self) -> Embed:
+        return self.generate_embed("Role creation success", f"Exophose successfully created your new role.", GREEN)
 
-    async def generate_embed_not_user_allowed(self) -> Embed :
-        return await self.generate_embed("User not allowed", "You are not allowed to create custom roles for yourself as you have none of the allowed roles.")
+    def maximum_roles(self) -> Embed:
+        return self.generate_embed("Maximum Roles", "You have reached the maximum number of roles for your allowed role.")
 
-    async def generate_embed_not_badge_allowed(self) -> Embed :
-        return await self.generate_embed("User not allowed", "You are not allowed to set custom badges with your currently allowed role(s).")
+    #Admin
+    def allowed_role_added(self, role: Role) -> Embed:
+        return self.generate_embed("Configuration changed", f"Exophose allowed {role.mention} to use role management commands.", color=GREEN)
 
-    async def generate_embed_success_modification(self, action: str) -> Embed:
-        return await self.generate_embed(f"Role {action} success", f"Exophose successfully {action}{'d' if action.endswith('e') else 'ed'} your role.", 0x00CC00)
+    def allowed_role_updated(self, role: Role) -> Embed:
+        return self.generate_embed("Configuration changed", f"Exophose updated the permissions for {role.mention}.", GREEN)
 
-    async def generate_embed_fail_index_modification(self, action: str) -> Embed: 
-        return await self.generate_embed(f"Role {action} error", f"You must specify a valid index for the role you want to {action}.")
+    def allowed_role_removed(self, role: Role) -> Embed:
+        return self.generate_embed("Configuration changed", f"Exophose disallowed {role.mention} from using role management commands.", GREEN)
 
-    async def generate_embed_fail_missing_modification(self, action: str) -> Embed: 
-        return await self.generate_embed(f"Role {action} error", f"Exophose cannot {action} your custom role as you do not have one.")
+    def allowed_role_error(self, role: Role) -> Embed:
+        return self.generate_embed("Unable to allow role", f"Exophose cannot allow {role.mention}. You have reached the maximum of 20 allowed roles.")
 
-    async def generate_embed_not_link_allowed(self) -> Embed: 
-        return await self.generate_embed("Invalid link", "The link you have provided is invalid. Make sure it's a `cdn.discordapp.com` or `media.discordapp.net` link containing an image of extension `.jpg`, `.jpeg` or `.png`.")
+    def allowed_role_missing(self, role: Role) -> Embed:
+        return self.generate_embed("Unable to disallow role", f"Exophose cannot disallow {role.mention} as it is already disallowed.")
+    
+    @try_func_async(embed=True)
+    async def allowed_roles(self, guild_id: int) -> Embed:
+        (data,) = self._get_cogs(include_data=True)
 
-    async def generate_embed_link_error(self) -> Embed: 
-        return await self.generate_embed("No access", "The link you have provided was valid but exophose cannot access it. Make sure it's not an image posted through Direct Messages, except for Exophose's.")
+        allowed_roles: list[AllowedRole] = await data.get_allowed_roles(guild_id)
 
-    async def generate_cog_restarted(self, cog: str) -> Embed :
-        return await self.generate_embed("Cog Restarted", f"`{cog}` cog was successfully restarted.")
+        if not any(allowed_roles):
+            return self.generate_embed("Allowed Roles", "Your server has no allowed roles.", WHITE)
 
-    async def generate_cog_restart_error(self, cog: str) -> Embed :
-        return await self.generate_embed("Cog Restart Failed", f"`{cog}` cog could not be restarted.")
+        embed = self.generate_embed("Allowed Roles", "Here is a list of the allowed roles in your server.", WHITE)
 
-    async def generate_no_cog_found(self, cog: str) -> Embed :
-        return await self.generate_embed("Cog Not Found", f"`{cog}` cog was not found. Double-check availability.")
+        for allowed_role in allowed_roles:
+            ping = "**everyone**" if allowed_role.is_everyone else f"<@&{allowed_role.id}>"
+            role_plural = "s" if allowed_role.max_roles > 1 else ""
+            max_roles = f"Can create **{allowed_role.max_roles}** role{role_plural}"
+            not_badges = "" if allowed_role.allow_badges else "not"
+            allow_badges = f"**Can{not_badges}** add custom badges"
+            allowed_by = f"Allowed by <@{allowed_role.user_id}> on **<t:{int(allowed_role.created_date.timestamp())}>**"
+            updated_by = f"\nLast update by <@{allowed_role.updated_user_id}> on **<t:{int(allowed_role.updated_date.timestamp())}>**" if allowed_role.updated_user_id is not None else ""
+            field = f"{ping} | {max_roles} | {allow_badges}\n{allowed_by}{updated_by}"
+
+            embed.add_field(name="\u200b", value=field, inline=False)
+
+        return embed
+
+    #User
+    @try_func_async(embed=True)
+    async def created_roles(self, member: Member) -> Embed:
+        (data,) = self._get_cogs(include_data=True)
+        
+        created_roles: list[CreatedRole] = await data.get_member_roles(member.guild.id, member.id)
+
+        if not any(created_roles):
+            return self.generate_embed("Created Roles", f"{member.mention} has not created any roles.", WHITE)
+        
+        embed = self.generate_embed("Created Roles", f"Here is a list of the created roles for {member.mention}.", WHITE)
+
+        i: int = 0
+        for created_role in created_roles:
+            role: Role = member.guild.get_role(created_role.id)
+            index = f"Index: `{i}`"
+            ping = f"<@&{role.id}>"
+            hexstrcolor = "{0:#0{1}x}".format(role.colour.value, 8)[2:]
+            color = f"Color: `#{hexstrcolor}`"
+            badge = f" | [View badge]({role.icon.url})" if role.icon is not None else ""
+            created_date = f"Created on **<t:{int(created_role.created_date.timestamp())}>**"
+            field = f"{index} | {ping} | {color}{badge}\n{created_date}"
+
+            embed.add_field(name=f"\u200b", value=field, inline=False)
+            i += 1
+
+        return embed
+
+    @try_func_async(embed=True)
+    async def preview_color(self, member: Member, color: str) -> Embed:
+        (utilities,) = self._get_cogs(include_utilities=True)
+            
+        hexcolor = await utilities.parse_color(color)
+
+        if hexcolor is None:
+            return self.generate_embed("Color preview", "To preview colors, you can use an [online color picker](https://www.google.com/search?q=colorpicker). Make sure to use the hexadecimal value.", WHITE)
+        
+        hexstrcolor : str = "{0:#0{1}x}".format(hexcolor, 8)[2:]
+        embed = self.generate_embed(f"Color preview for #{hexstrcolor}", "If you want to preview other colors, you can use an [online color picker](https://www.google.com/search?q=colorpicker). Make sure to use the hexadecimal value.", hexcolor)
+        
+        img = Image.new('RGB', (300, 300), tuple(int(hexstrcolor[i:i+2], 16) for i in (0, 2, 4)))
+
+        if (avatar := member.guild_avatar or member.avatar) is not None:
+            avatarpath256 = avatar.url.replace("size=1024", "size=256")
+            pfp = Image.open(requests.get(avatarpath256, stream=True).raw)
+            mask = Image.new("L", pfp.size, 0)
+            draw = ImageDraw.Draw(mask)
+            draw.ellipse((0, 0, 255, 255), fill=255)
+            img.paste(pfp, (22, 22), mask.filter(ImageFilter.GaussianBlur(3)))
+        
+        file = f"./temp/{member.id}_{hex(hexcolor)[2:]}.jpg"
+        img.save(file, quality=100)
+
+        message: Message = await self.bot.get_channel(TEMP_IMG_CHANNEL).send(file=File(file))
+
+        embed.set_thumbnail(url=message.attachments[0].url)
+
+        await message.delete()
+        os.remove(file)
+
+    def success_modification(self, action: str) -> Embed:
+        return self.generate_embed(f"Role {action} success", f"Exophose successfully {action}{'d' if action.endswith('e') else 'ed'} your role.", GREEN)
+
+    def missing_modification_index(self, action: str) -> Embed: 
+        return self.generate_embed(f"Role {action} error", f"You must specify a valid index for the role you want to {action}.")
+
+    def missing_modification_role(self, action: str) -> Embed: 
+        return self.generate_embed(f"Role {action} error", f"Exophose cannot {action} your custom role as you do not have one.")
+
+    #Errors
+    def color_parsing_error(self) -> Embed:
+        return self.generate_embed("Parsing error", f"Exophose cannot parse the given color as it is either not a hexadecimal number or not between #000000 and #FFFFFF.")
+
+    def unexpected_error(self) -> Embed:
+        return self.generate_embed("Unexpected Error", f"Exophose encountered an unexpected error.")
+
+    def unexpected_sql_error(self) -> Embed:
+        return self.generate_embed("Unexpected SQL Error", f"Exophose encountered an unexpected error with the SQL database. Impossible to complete this action at the moment. This may highly be due to the SQL server being under maintenance. I have no control over this.")
+
+    def forbidden_error(self) -> Embed:
+        return self.generate_embed("403 Forbidden", f"Exophose encountered a forbidden error while trying to edit a role. Make sure it was not moved above the bot's role.")
+
+    #Verification
+    def not_user_allowed(self) -> Embed:
+        return self.generate_embed("User not allowed", "You are not allowed to create custom roles for yourself as you have none of the allowed roles.")
+
+    def not_badge_allowed(self) -> Embed:
+        return self.generate_embed("User not allowed", "You are not allowed to set custom badges with your currently allowed role(s).")
+
+    def not_file_allowed(self) -> Embed: 
+        return self.generate_embed("Invalid File", "The file you have provided is invalid. Make sure it's an image file type supported by discord (.png, .jpg, .webp).")
+
+    def not_permission_allowed(self) -> Embed:
+        return self.generate_embed("Permission Error", "Exophose is missing `Manage_Roles` permission.")
+
+    def not_feature_allowed(self) -> Embed:
+        return self.generate_embed("Missing feature", "Your server does not have role bages unlocked as they are a level 2 boost feature.")
+
+    #Debug
+    def cog_restarted(self, cog: str) -> Embed:
+        return self.generate_embed("Cog Restarted", f"`{cog}` cog was successfully restarted.", color=GREEN)
+
+    def cog_restart_error(self, cog: str) -> Embed:
+        return self.generate_embed("Cog Restart Failed", f"`{cog}` cog could not be restarted.")
 
 
 def setup(bot):

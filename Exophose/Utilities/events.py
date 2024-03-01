@@ -1,180 +1,104 @@
-from calendar import c
 from discord.activity import Activity
 from discord.bot import Bot
-from discord.channel import DMChannel
 from discord.enums import ActivityType
 from discord.ext import commands
-from discord.ext.commands import Context
 from discord.guild import Guild
 from discord.member import Member
 from discord.role import Role
-import traceback
+
+from Debug.debughelpers import try_func_async
+from Utilities.datahelpers import CreatedRole
+
+NAME = "Exophose"
 
 class Events(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
+    def _get_cogs(self, include_data: bool = False, include_utilities: bool = False, include_verification: bool = False) -> tuple:
+        data = self.bot.get_cog("Data") if include_data else None
+        utilities = self.bot.get_cog("Utilities") if include_utilities else None
+        verification = self.bot.get_cog("Verification") if include_verification else None
+        
+        if ((data is None and include_data) or 
+            (utilities is None and include_utilities) or 
+            (verification is None and include_verification)):
+            raise(ValueError("One or more cogs are missing.", data, utilities, verification))
+        
+        return tuple(filter(None, (data, utilities, verification)))
+
     @commands.Cog.listener()
+    @try_func_async()
     async def on_ready (self):
-        try:
-            cogcheck: int = 1
-            
-            data = self.bot.get_cog("Data")
-            if data is not None:
-                cogcheck += 1
-                await data.reconnect()
+        if (logging := self.bot.get_cog("Logging")) is not None:
+            await logging.log_event(f"Exophose is up. {len(self.bot.cogs)} of 13 cogs running. Currently serving {len(self.bot.guilds)} servers.", "INFO")
 
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                cogcheck += 1
-
-            if self.bot.get_cog("Embeds") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("Utilities") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("Verification") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("DebugMethods") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("DebugCommands") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("AdminMethods") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("AdminCommands") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("UserMethods") is not None:
-                cogcheck += 1
-            if self.bot.get_cog("UserCommands") is not None:
-                cogcheck += 1
-            
-            await self.bot.change_presence(activity=Activity(type=ActivityType.listening, name="/help"))
-            
-            if logging is not None:
-                await logging.log_event(f"Exophose is up. {cogcheck} of 12 cogs running. Currently serving {len(self.bot.guilds)} servers.", "INFO")
-
-        except Exception as e:
-            if logging is not None:
-                await logging.log_error(e,'events - on_ready', traceback.format_exc())
-        
-        return
+        await self.bot.change_presence(activity=Activity(type=ActivityType.listening, name="/help"))
         
     @commands.Cog.listener()
-    async def on_member_update(self, oldMember: Member, newMember: Member):
-        try:
-            verification = self.bot.get_cog("Verification")
-            methods = self.bot.get_cog("UserMethods")
-            data = self.bot.get_cog("Data")
-            
-            if verification is not None and methods is not None:
-                if await verification.has_permission(newMember.guild, 0):
-                    if not await verification.user_allowed(newMember):
-                        await methods.role_delete(newMember, "all")
-                    else:
-                        if not newMember.guild_permissions.administrator:
-                            if not await verification.is_user_within_maxroles(newMember.guild.id, newMember):
-                                await methods.role_delete(newMember, 0)
+    @try_func_async()
+    async def on_member_update(self, _, new_member: Member):
+        (data, utilities, verification) = self._get_cogs(True, True, True)
+        if await data.count_member_roles(new_member.guild.id, new_member.id) == 0:
+            return
 
-                            if data is not None:
-                                if not await verification.is_badge_allowed(newMember.guild.id, newMember):
-                                    for row in await data.get_created_roles_by_guild_by_user(newMember.guild.id, newMember.id):
-                                        role: Role = newMember.guild.get_role((int)(row[1]))
-                                        if role is not None and role.icon is not None:
-                                            await role.edit(icon=None)
-                                        
-
-            
-        except Exception as e:
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'events - on_member_update', traceback.format_exc())
+        if ((not await verification.has_permission(new_member.guild)) or
+            new_member.guild_permissions.administrator):
+            return
         
-        return
+        if not await verification.user_allowed(new_member):
+            while not await verification.is_user_within_max_roles(new_member.guild.id, new_member):
+                await utilities.delete_role(new_member, 0)
+            return
+
+        if not await verification.is_badge_allowed(new_member.guild.id, new_member):
+            created_roles: list[CreatedRole] = await data.get_member_roles(new_member.guild.id, new_member.id)
+            for created_role in created_roles:
+                role: Role = new_member.guild.get_role(created_role.id)
+                if role is not None and role.icon is not None:
+                    await role.edit(icon=None)
 
     @commands.Cog.listener()
+    @try_func_async()
     async def on_member_remove(self, member: Member):
-        try:
-            methods = self.bot.get_cog("UserMethods")
-            
-            if methods is not None:
-                await methods.role_delete(member, "all")
-
-        except Exception as e:
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'events - on_member_remove', traceback.format_exc())
+        (utilities,) = self._get_cogs(include_utilities=True)
         
-        return
+        await utilities.delete_all_roles(member)
 
     @commands.Cog.listener()
+    @try_func_async()
     async def on_guild_join(self, guild: Guild):
-        try:
-            data = self.bot.get_cog("Data")
-            
-            if data is not None:
-                member: Member = guild.get_member(self.bot.user.id)
-
-                for role in member.roles:
-                    if role.name == 'Exophose':
-                        await data.add_exophose_role(role.id, guild.id)
-                        return
-
-                await data.add_exophose_role('0', guild.id)
-            
-        except Exception as e:
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'events - on_guild_join', traceback.format_exc())
+        (data,) = self._get_cogs(include_data=True)
         
-        return
+        member: Member = guild.get_member(self.bot.user.id)
+
+        for role in member.roles:
+            if role.name == NAME:
+                await data.add_server(role.id, guild.id)
+                return
+
+        await data.add_server('0', guild.id)
 
     @commands.Cog.listener()
+    @try_func_async()
     async def on_guild_remove(self, guild: Guild):
-        try:
-            data = self.bot.get_cog("Data")
-            
-            if data is not None:
-                if guild.name is not None:
-                    logging = self.bot.get_cog("Logging")
-                    if logging is not None:
-                        await logging.log_event(f"Exophose was removed from guild '{guild.id}'.", "INFO")
-                    await data.delete_created_roles_by_guild(guild.id)
-                    await data.delete_allowed_roles_by_guild(guild.id)
-                    await data.delete_exophose_role_by_guild(guild.id)
-            
-        except Exception as e:
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'events - on_guild_remove', traceback.format_exc())
+        (data,) = self._get_cogs(include_data=True)
         
-        return
+        if guild.name is None:
+            return
+        
+        await data.delete_server(guild.id)
 
     @commands.Cog.listener()
+    @try_func_async()
     async def on_guild_role_delete(self, role: Role):
-        try:
-            data = self.bot.get_cog("Data")
-            
-            if data is not None:
-                await data.delete_created_role_by_role(role.id)
-                await data.delete_allowed_role_by_role(role.id)
-            
-        except Exception as e:
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'events - on_guild_role_delete', traceback.format_exc())
+        (data,) = self._get_cogs(include_data=True)
         
-        return
+        if await data.is_member_role(role.id):
+            await data.delete_member_role(role.id)
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx: Context, e):
-        embeds = self.bot.get_cog("Embeds")
-        if embeds is not None:
-            if type(ctx.channel) is not DMChannel:
-                if isinstance(e, commands.CommandNotFound):
-                    await ctx.send(embed = await embeds.generate_embed("Command not found", "For a list of commands, enter `exo help` or use `/help`."))
-                elif isinstance(e, commands.MemberNotFound):
-                    await ctx.send(embed = await embeds.generate_embed("Member not found", "The input you have provided is not a valid member."))
-                elif isinstance(e, commands.RoleNotFound):
-                    await ctx.send(embed = await embeds.generate_embed("Role not found", "The input you have provided is not a valid role."))
+        if await data.is_allowed_role(role.id):
+            await data.delete_allowed_role(role.id)
 
 def setup(bot):
     bot.add_cog(Events(bot))

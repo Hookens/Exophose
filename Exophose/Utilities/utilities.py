@@ -3,86 +3,90 @@ from discord.ext import commands
 from discord.guild import Guild
 from discord.member import Member
 from discord.role import Role
-import traceback
-import requests
+
+from Debug.debughelpers import try_func_async
+from Utilities.datahelpers import ExoRole, CreatedRole
 
 class Utilities(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    def parsable_int(self, string: str) -> bool:
-        try:
-            integer: int = int(string)
-            return True
-        except Exception:
-            return False
+    def _get_cog(self):
+        data = self.bot.get_cog("Data")
+        
+        if data is None:
+            raise(ValueError("Data cog missing."))
+
+        return data
 
     def parsable_color(self, color: str) -> bool:
         try:
             intcolor: int = int(color, 16)
-            return True
-        except Exception as e:
+        except:
             return False
+        
+        return True
 
-    async def parse_color (self, color: str):
-        """Turns a string into a hexacedimal int representing a color.\n
-        Returns: The int value, or an empty string if the original string is invalid."""
-
-        intcolor = None
+    @try_func_async()
+    async def parse_color(self, color: str):
         hexcolor = color.replace('#', '')
 
-        try:
-            if self.parsable_color(hexcolor):
-                intcolor = int(hexcolor, 16)
-                if intcolor > 0xFFFFFF or intcolor < 0 :
-                    intcolor = None
-                elif intcolor == 0:
-                    intcolor = 0x010101
-            return intcolor
+        if not self.parsable_color(hexcolor):
+            return 0
         
-        except Exception as e:
-            #await log_error(e, "Exophose", 'utilities - parse_color', traceback.format_exc())
-            return None
+        intcolor = int(hexcolor, 16)
+        if intcolor > 0xFFFFFF or intcolor < 0:
+            intcolor = 0
+        elif intcolor == 0:
+            intcolor = 0x010101
+        
+        return intcolor
 
-    async def get_member_in_guild(self, guild: Guild, userid = None) -> Member:
-        try :
-            if self.parsable_int(userid):
-                return guild.get_member(int(userid))
-            return None
-        except Exception as e :
-            #await log_error(e, "Exophose", 'utilities - get_member_in_guild', traceback.format_exc())
-            return None
+    @try_func_async()
+    async def reposition(self, role: Role):
+        data = self._get_cog()
+        
+        exo_role: ExoRole = await data.get_server(role.guild.id)
+        
+        if exo_role is None or exo_role.id == 0:
+            return
+        
+        botrole = role.guild.get_role(exo_role.id)
 
-    async def reposition (self, role: Role):
-        try:
-            data = self.bot.get_cog("Data")
-            if data is not None:
-                botrole = role.guild.get_role(await data.get_exophose_role_by_guild(str(role.guild.id)))
+        if botrole and botrole.permissions.manage_roles:
+            try:
+                await role.edit(position=botrole.position - 1)
+            except:
+                pass
 
-                if botrole :
-                    if botrole.permissions.manage_roles:
-                        i = 1
-                        while botrole.position - i > 1:
-                            try:
-                                await role.edit(position=(botrole.position - i))
-                                break
-                            except Exception as e:
-                                logging = self.bot.get_cog("Logging")
-                                if logging is not None:
-                                    await logging.log_error(e,'utilities - reposition', traceback.format_exc(), botrole.position, role.position, i, botrole.position - i)
-                                i += 1
+    @try_func_async()
+    async def delete_role(self, member: Member, role_index: int) -> bool:
+        data = self._get_cog()
+        
+        created_roles: list[CreatedRole] = await data.get_member_roles(member.guild.id, member.id)
 
-        except Exception as e:
-            logging = self.bot.get_cog("Logging")
-            if logging is not None:
-                await logging.log_error(e,'utilities - reposition', traceback.format_exc(), botrole.position, role.position)
+        if 0 <= role_index < len(created_roles):
+            guild: Guild = self.bot.get_guild(created_roles[role_index].guild_id)
+            role: Role = guild.get_role(created_roles[role_index].id)
 
-    async def fetch_image(self, link: str) -> bytes:
-        try:
-            image: bytes = requests.get(link).content
-            return image
-        except Exception as e:
-            return None
+            if await data.delete_member_role(role.id):
+                await role.delete()
+                return True
+            
+        return False
+
+    @try_func_async()
+    async def delete_all_roles(self, member: Member):
+        data = self._get_cog()
+        
+        created_roles: list[CreatedRole] = await data.get_member_roles(member.guild.id, member.id)
+        await data.delete_member_roles(member.guild.id, member.id)
+
+        for created_role in created_roles:
+            guild: Guild = self.bot.get_guild(created_role.guild_id)
+            role: Role = guild.get_role(created_role.id)
+            
+            await role.delete()
 
 def setup(bot):
     bot.add_cog(Utilities(bot))
