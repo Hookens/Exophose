@@ -59,15 +59,15 @@ class Data(commands.Cog):
             return None
 
     async def add_server(self, role_id: int, guild_id: int) -> bool:
-        await self._log_sql_event(f"'{guild_id}' added with '{role_id}'", "INFO")
+        await self._log_sql_event(f"Joined G'{guild_id}' with R'{role_id}'", "INFO")
         return await self._execute_write_operation("ExoAddServer", role_id, guild_id)
 
     async def add_allowed_role(self, role_id: int, guild_id: int, user_id: int, max_roles:int, allow_badges: bool) -> bool:
-        await self._log_sql_event(f"'{user_id}' from '{guild_id}' allowed '{role_id}' ({max_roles}, {allow_badges})", "INFO")
+        await self._log_sql_event(f"Allowed R'{role_id}' ({max_roles}, {allow_badges}) from G'{guild_id}' by U'{user_id}'", "INFO")
         return await self._execute_write_operation("ExoAddAllowedRole", role_id, guild_id, user_id, max_roles, allow_badges)
 
     async def add_member_role(self, role_id: int, guild_id: int, user_id: int) -> bool:
-        await self._log_sql_event(f"'{user_id}' from '{guild_id}' created '{role_id}'", "INFO")
+        await self._log_sql_event(f"Created R'{role_id}' from G'{guild_id}' by U'{user_id}'", "INFO")
         return await self._execute_write_operation("ExoAddMemberRole", role_id, guild_id, user_id)
     
     async def is_allowed_role(self, role_id: int) -> bool:
@@ -109,19 +109,19 @@ class Data(commands.Cog):
             ) for row in result] if result is not None else None
 
     async def delete_server(self, guild_id: int) -> bool:
-        await self._log_sql_event(f"Removed from '{guild_id}'", "INFO")
+        await self._log_sql_event(f"Removed from G'{guild_id}'", "INFO")
         return await self._execute_write_operation("ExoDeleteServer", guild_id)
 
     async def delete_allowed_role(self, role_id: int) -> bool:
-        await self._log_sql_event(f"Removed allowed '{role_id}'", "INFO")
+        await self._log_sql_event(f"Removed allowed R'{role_id}'", "INFO")
         return await self._execute_write_operation("ExoDeleteAllowedRole", role_id)
 
     async def delete_member_role(self, role_id: int) -> bool:
-        await self._log_sql_event(f"Removed created '{role_id}'", "INFO")
+        await self._log_sql_event(f"Removed created R'{role_id}'", "INFO")
         return await self._execute_write_operation("ExoDeleteMemberRole", role_id)
 
     async def delete_member_roles(self, guild_id: int, user_id: int) -> bool:
-        await self._log_sql_event(f"Removed '{user_id}' from '{guild_id}'", "INFO")
+        await self._log_sql_event(f"Removed U'{user_id}' from G'{guild_id}'", "INFO")
         return await self._execute_write_operation("ExoDeleteMemberRoles", guild_id, user_id)
     
 def setup(bot):

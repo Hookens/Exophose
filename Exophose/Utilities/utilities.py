@@ -78,8 +78,14 @@ class Utilities(commands.Cog):
     @try_func_async()
     async def delete_all_roles(self, member: Member):
         data = self._get_cog()
+
+        if not any(member.roles):
+            return
         
         created_roles: list[CreatedRole] = await data.get_member_roles(member.guild.id, member.id)
+        if not any(created_roles):
+            return
+        
         await data.delete_member_roles(member.guild.id, member.id)
 
         for created_role in created_roles:
