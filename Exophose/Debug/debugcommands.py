@@ -6,48 +6,24 @@ from discord.embeds import Embed
 from discord.ext import commands
 
 from Debug.debughelpers import try_func_async
+from Utilities.constants import DebugTexts, DebugLists, LoadOrder
 
-#Defines which guilds can access debug commands.
-GUILDS = [
-    858709508561436714,
-]
-
-COGS = [
-    "Admin.admincommands",
-    "Admin.adminmethods", 
-    "Debug.debugcommands", 
-    "Debug.debugmethods", 
-    "User.usercommands", 
-    "User.usermethods", 
-    "Utilities.data", 
-    "Utilities.embeds", 
-    "Utilities.events", 
-    "Utilities.help", 
-    "Utilities.utilities", 
-    "Utilities.verification",
-]
-
-C_ANNOUNCE = "Make an announcement embed."
-C_SHUTDOWN = "Ends the bot thread."
-C_RELOAD = "Reload a cog."
-C_STATUS = "Get bot cogs' status."
-
-F_TITLE = "Title for the announcement."
-F_DESCRIPTION = "Description for the announcement."
-F_COG = "Cog that needs to be reloaded."
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Debug.debugmethods import DebugMethods
 
 class DebugCommands(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.slash_command(name="announce", description=C_ANNOUNCE, guild_ids=GUILDS)
+    @commands.slash_command(name="announce", description=DebugTexts.C_ANNOUNCE, guild_ids=DebugLists.GUILDS)
     @default_permissions(administrator=True,)
     @try_func_async()
     async def slash_announce(
             self,
             ctx: ApplicationContext,
-            title: Option(str, F_TITLE, required=True),
-            description: Option(str, F_DESCRIPTION, required=True)):
+            title: Option(str, DebugTexts.F_TITLE, required=True),
+            description: Option(str, DebugTexts.F_DESCRIPTION, required=True)):
         await ctx.interaction.response.defer(ephemeral=True)
 
         description = description.replace("\\n", "\n")
@@ -56,7 +32,7 @@ class DebugCommands(commands.Cog):
         await ctx.channel.send(embed=embed)
         await ctx.interaction.followup.send(content="Announcement created.")
 
-    @commands.slash_command(name="shutdown", description=C_SHUTDOWN, guild_ids=GUILDS)
+    @commands.slash_command(name="shutdown", description=DebugTexts.C_SHUTDOWN, guild_ids=DebugLists.GUILDS)
     @default_permissions(administrator=True,)
     @try_func_async()
     async def slash_shutdown(
@@ -67,19 +43,20 @@ class DebugCommands(commands.Cog):
 
         exit(1)
 
-    @commands.slash_command(name="reload", description=C_RELOAD, guild_ids=GUILDS)
+    @commands.slash_command(name="reload", description=DebugTexts.C_RELOAD, guild_ids=DebugLists.GUILDS)
     @default_permissions(administrator=True,)
     @try_func_async()
     async def slash_reload(
             self,
             ctx: ApplicationContext,
-            cog: Option(str, F_COG, choices=COGS, required=True)):
+            cog: Option(str, DebugTexts.F_COG, choices=LoadOrder.COGS, required=True)):
         await ctx.interaction.response.defer(ephemeral=True)
         
+        methods: DebugMethods
         if (methods := self.bot.get_cog("DebugMethods")) is not None:
             await ctx.interaction.followup.send(embed=await methods.reload_cog(cog))
     
-    @commands.slash_command(name="status", description=C_STATUS, guild_ids=GUILDS)
+    @commands.slash_command(name="status", description=DebugTexts.C_STATUS, guild_ids=DebugLists.GUILDS)
     @default_permissions(administrator=True,)
     @try_func_async()
     async def slash_status(
@@ -87,6 +64,7 @@ class DebugCommands(commands.Cog):
             ctx: ApplicationContext):
         await ctx.interaction.response.defer(ephemeral=True)
         
+        methods: DebugMethods
         if (methods := self.bot.get_cog("DebugMethods")) is not None:
             await ctx.interaction.followup.send(embed=await methods.cog_status())
 

@@ -19,3 +19,15 @@ class AllowedRole(CreatedRole):
         self.updated_user_id = int(updated_user_id) if updated_user_id is not None else None
         self.updated_date = updated_date
         self.is_everyone = id == guild_id
+
+class Bundle():
+    def __init__(self, id: int, guild_id: str, name: str):
+        self.id = id
+        self.guild_id = int(guild_id)
+        self.name = name
+
+class BundleRole():
+    def __init__(self, bundle_id: int, id: str, guild_id: str):
+        self.id = int(id)
+        self.bundle_id = bundle_id
+        self.guild_id = int(guild_id)

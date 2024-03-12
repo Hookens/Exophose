@@ -3,12 +3,17 @@ from discord.ext import commands
 from discord.embeds import Embed
 
 from Debug.debughelpers import try_func_async
+from Utilities.constants import DebugLists, LoggingDefaults
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Utilities.embeds import Embeds
 
 class DebugMethods(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    def _get_cog(self) -> tuple:
+    def _get_cog(self) -> 'Embeds':
         embeds = self.bot.get_cog("Embeds")
         
         if embeds is None:
@@ -38,27 +43,33 @@ class DebugMethods(commands.Cog):
         
         embed: Embed = embeds.generate_embed("Cog Statuses", "", 0xFFFFFF)
 
-        admincommands = self.bot.get_cog("AdminCommands") 
-        adminmethods = self.bot.get_cog("AdminMethods") 
-        debugcommands = self.bot.get_cog("DebugCommands") 
-        debugmethods = self.bot.get_cog("DebugMethods") 
-        usercommands = self.bot.get_cog("UserCommands") 
-        usermethods = self.bot.get_cog("UserMethods") 
-        data = self.bot.get_cog("Data") 
-        embeds = self.bot.get_cog("Embeds") 
-        events = self.bot.get_cog("Events") 
-        help = self.bot.get_cog("Help") 
-        logging = self.bot.get_cog("Logging") 
-        utilities = self.bot.get_cog("Utilities") 
-        verification = self.bot.get_cog("Verification") 
+        cogdict = {}
+        for cog in DebugLists.COGS:
+            cogdict[cog] = self.bot.get_cog(cog)
+            
+        admincogs = {k:v for (k,v) in cogdict.items() if "Admin" in k}
+        bundlecogs = {k:v for (k,v) in cogdict.items() if "Bundle" in k}
+        debugcogs = {k:v for (k,v) in cogdict.items() if "Debug" in k}
+        helpcogs = {k:v for (k,v) in cogdict.items() if "Help" in k}
+        usercogs = {k:v for (k,v) in cogdict.items() if "User" in k}
+        othercogs = {k:v for (k,v) in cogdict.items() if "Admin" not in k and "Bundle" not in k and "Debug" not in k and "Help" not in k and "User" not in k}
 
-        embed.add_field(name="Admin", value=f"{'🟢' if admincommands is not None else '🔴' } AdminCommands\n{'🟢' if adminmethods is not None else '🔴' } AdminMethods", inline=False)
-        embed.add_field(name="Debug", value=f"{'🟢' if debugcommands is not None else '🔴' } DebugCommands\n{'🟢' if debugmethods is not None else '🔴' } DebugMethods\n{'🟢' if logging is not None else '🔴' } Logging", inline=False)
-        embed.add_field(name="User", value=f"{'🟢' if usercommands is not None else '🔴' } UserCommands\n{'🟢' if usermethods is not None else '🔴' } UserMethods", inline=False)
-        embed.add_field(name="Utilities", value=f"{'🟢' if data is not None else '🔴' } Data\n{'🟢' if embeds is not None else '🔴' } Embeds\n{'🟢' if events is not None else '🔴' } Events\n{'🟢' if help is not None else '🔴' } Help\n{'🟢' if utilities is not None else '🔴' } Utilities\n{'🟢' if verification is not None else '🔴' } Verification", inline=False)
+        adminfields = ''.join([f"{'🟢' if v is not None else '🔴' } {k}\n" for (k,v) in admincogs.items()])
+        bundlefields = ''.join([f"{'🟢' if v is not None else '🔴' } {k}\n" for (k,v) in bundlecogs.items()])
+        debugfields = ''.join([f"{'🟢' if v is not None else '🔴' } {k}\n" for (k,v) in debugcogs.items()])
+        helpfields = ''.join([f"{'🟢' if v is not None else '🔴' } {k}\n" for (k,v) in helpcogs.items()])
+        userfields = ''.join([f"{'🟢' if v is not None else '🔴' } {k}\n" for (k,v) in usercogs.items()])
+        otherfields = ''.join([f"{'🟢' if v is not None else '🔴' } {k}\n" for (k,v) in othercogs.items()])
+
+        embed.add_field(name="Admin", value=adminfields, inline=False)
+        embed.add_field(name="Bundle", value=bundlefields, inline=False)
+        embed.add_field(name="Debug", value=debugfields, inline=False)
+        embed.add_field(name="Help", value=helpfields, inline=False)
+        embed.add_field(name="User", value=userfields, inline=False)
+        embed.add_field(name="Utilities", value=otherfields, inline=False)
         embed.add_field(name="Server Count", value=f"Serving {len(self.bot.guilds)} servers")
         
-        embed.description = f"{len(self.bot.cogs)} of 13 cogs working."
+        embed.description = f"{len(self.bot.cogs)} of {LoggingDefaults.COG_COUNT} cogs working."
 
         return embed
 

@@ -7,11 +7,15 @@ from discord.role import Role
 from Debug.debughelpers import try_func_async
 from Utilities.datahelpers import ExoRole, CreatedRole
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Utilities.data import Data
+
 class Utilities(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    def _get_cog(self):
+    def _get_cog(self) -> 'Data':
         data = self.bot.get_cog("Data")
         
         if data is None:

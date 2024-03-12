@@ -6,19 +6,25 @@ from discord.role import Role
 
 from Debug.debughelpers import try_func_async
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Utilities.data import Data
+    from Utilities.embeds import Embeds
+    from Utilities.verification import Verification
+
 class AdminMethods(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    def _get_cogs(self) -> tuple:
+    def _get_cogs(self) -> tuple['Data', 'Embeds', 'Verification']:
         data = self.bot.get_cog("Data")
-        verification = self.bot.get_cog("Verification")
         embeds = self.bot.get_cog("Embeds")
+        verification = self.bot.get_cog("Verification")
         
-        if data is None or verification is None or embeds is None:
-            raise(ValueError("One or more cogs are missing.", data, verification, embeds))
+        if data is None or embeds is None or verification is None:
+            raise(ValueError("One or more cogs are missing.", data, embeds, verification))
         
-        return (data, verification, embeds)
+        return (data, embeds, verification)
 
     @try_func_async(embed=True)
     async def allow_role(
@@ -27,9 +33,9 @@ class AdminMethods(commands.Cog):
             role: Role,
             max_roles: int,
             allow_badges: bool) -> Embed:
-        (data, verification, embeds) = self._get_cogs()
+        (data, embeds, verification) = self._get_cogs()
 
-        if not verification.is_role_name_allowed(role.name):
+        if not verification.is_name_allowed(role.name):
             return embeds.blacklisted_word()
 
         allowable = await verification.is_role_allowable(role.id, ctx.guild.id)
@@ -49,7 +55,7 @@ class AdminMethods(commands.Cog):
             self,
             ctx: ApplicationContext,
             role: Role) -> Embed:
-        (data, verification, embeds) = self._get_cogs()
+        (data, embeds, verification) = self._get_cogs()
         
         if await verification.is_role_allowable(role.id, ctx.guild.id) != 2:
             return embeds.allowed_role_missing(role)

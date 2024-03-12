@@ -1,9 +1,9 @@
 # Exophose
-A simple role management bot that can create custom roles with a given name, color and badge, which could be a reward for your supporters.
+An all-in-one solution for granting customization options to your support tiers. Configure bundles, allow complete customization to the roles of your choosing, and let Exophose take care of the rest.
 
 ## Useful links
-- [Exophose](https://top.gg/bot/854906458344259615)
-- [Direct invite](https://discord.com/oauth2/authorize?client_id=854906458344259615&permissions=268435456&scope=bot%20applications.commands)
+- [Invite Exophose](https://discord.com/application-directory/854906458344259615)
+- [Support my work](https://ko-fi.com/hookens)
 - [Support server](https://discord.gg/dAabxGzned)
 
 ## Dependencies

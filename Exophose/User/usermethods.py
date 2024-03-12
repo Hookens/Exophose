@@ -7,12 +7,15 @@ from discord.ext import commands
 from discord.role import Role
 
 from Debug.debughelpers import try_func_async
+from Utilities.constants import UserTexts
 from Utilities.datahelpers import CreatedRole
 
-DELETE_REASON = "Impossible to connect to the SQL database at the moment."
-F_NO_PERMS = "Your guild does not support custom role badges."
-F_NOT_ALLOWED = "You do not have badge permissions with your currently allowed role(s)."
-F_INVALID_FILE = "The file you have provided is invalid. Make sure it's an image file type supported by discord (.png, .jpg, .webp)."
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Utilities.data import Data
+    from Utilities.embeds import Embeds
+    from Utilities.utilities import Utilities
+    from Utilities.verification import Verification
 
 class UserMethods(commands.Cog):
     def __init__(self, bot: Bot):
@@ -39,15 +42,19 @@ class UserMethods(commands.Cog):
             role_name: str,
             role_color: str,
             role_badge: Attachment) -> Embed:
+        data: 'Data'
+        embeds: 'Embeds'
+        utilities: 'Utilities'
+        verification: 'Verification'
         (data, embeds, utilities, verification) = self._get_cogs(True, True, True, True)
 
-        if not await verification.has_permission(ctx.guild):
+        if not verification.has_permission(ctx.guild):
             return embeds.not_permission_allowed()
         
         if not await verification.is_user_role_addable(ctx.guild.id, ctx.author):
             return embeds.maximum_roles()
 
-        if not verification.is_role_name_allowed(role_name):
+        if not verification.is_name_allowed(role_name):
             return embeds.blacklisted_word()
 
         hex_color = await utilities.parse_color(role_color)
@@ -57,7 +64,7 @@ class UserMethods(commands.Cog):
         
         created_role: Role = await ctx.guild.create_role(name=role_name,colour=Colour(hex_color))
         if not await data.add_member_role(created_role.id, ctx.guild.id, ctx.author.id):
-            await created_role.delete(reason=DELETE_REASON)
+            await created_role.delete(reason=UserTexts.DELETE_REASON)
             return embeds.unexpected_sql_error()
         
         await ctx.author.add_roles(created_role)
@@ -66,13 +73,13 @@ class UserMethods(commands.Cog):
 
         if role_badge is not None:
             if "ROLE_ICONS" not in ctx.guild.features:
-                embed.set_footer(text=F_NO_PERMS)
+                embed.set_footer(text=UserTexts.DF_NO_PERMS)
 
             if not await verification.is_badge_allowed(ctx.guild.id, ctx.author):
-                embed.set_footer(text=F_NOT_ALLOWED)
+                embed.set_footer(text=UserTexts.DF_NOT_ALLOWED)
 
             if not role_badge.content_type.startswith("image"):
-                embed.set_footer(text=F_INVALID_FILE)
+                embed.set_footer(text=UserTexts.DF_INVALID_FILE)
             else:
                 try:
                     await created_role.edit(icon=await role_badge.read())
@@ -86,9 +93,12 @@ class UserMethods(commands.Cog):
             self,
             ctx: ApplicationContext,
             role_index: int) -> Embed:
+        embeds: 'Embeds'
+        utilities: 'Utilities'
+        verification: 'Verification'
         (embeds, utilities, verification) = self._get_cogs(include_embeds=True, include_utilities=True, include_verification=True)
 
-        if not await verification.has_permission(ctx.guild):
+        if not verification.has_permission(ctx.guild):
             return embeds.not_permission_allowed()
         
         if await utilities.delete_role(ctx.author, role_index):
@@ -102,9 +112,13 @@ class UserMethods(commands.Cog):
             ctx: ApplicationContext, 
             role_color: str, 
             role_index: int) -> Embed:
+        data: 'Data'
+        embeds: 'Embeds'
+        utilities: 'Utilities'
+        verification: 'Verification'
         (data, embeds, utilities, verification) = self._get_cogs(True, True, True, True)
 
-        if not await verification.has_permission(ctx.guild):
+        if not verification.has_permission(ctx.guild):
             return embeds.not_permission_allowed()
         
         hex_color = await utilities.parse_color(role_color)
@@ -130,12 +144,15 @@ class UserMethods(commands.Cog):
             ctx: ApplicationContext, 
             role_name: str, 
             role_index: int) -> Embed:
+        data: 'Data'
+        embeds: 'Embeds'
+        verification: 'Verification'
         (data, embeds, verification) = self._get_cogs(include_data=True, include_embeds=True, include_verification=True)
         
-        if not await verification.has_permission(ctx.guild):
+        if not verification.has_permission(ctx.guild):
             return embeds.not_permission_allowed()
 
-        if not verification.is_role_name_allowed(role_name):
+        if not verification.is_name_allowed(role_name):
             return embeds.blacklisted_word()
         
         created_roles: list[CreatedRole] = await data.get_member_roles(ctx.guild.id, ctx.author.id)
@@ -151,12 +168,19 @@ class UserMethods(commands.Cog):
         return embeds.success_modification("rename")
     
     @try_func_async(embed=True)
-    async def role_rebadge (self, ctx: ApplicationContext, role_badge: Attachment, role_index: int) -> Embed:
+    async def role_rebadge (
+            self,
+            ctx: ApplicationContext,
+            role_badge: Attachment,
+            role_index: int) -> Embed:
+        data: 'Data'
+        embeds: 'Embeds'
+        verification: 'Verification'
         (data, embeds, verification) = self._get_cogs(include_data=True, include_embeds=True, include_verification=True)
         if "ROLE_ICONS" not in ctx.guild.features:
             return embeds.not_feature_allowed()
         
-        if not await verification.has_permission(ctx.guild):
+        if not verification.has_permission(ctx.guild):
             return embeds.not_permission_allowed()
 
         if not await verification.is_badge_allowed(ctx.guild.id, ctx.author):

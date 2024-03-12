@@ -5,9 +5,7 @@ from discord.ext import commands
 from discord.channel import TextChannel
 from discord.embeds import Embed
 
-NAME = "Exophose"
-CHANNEL = 890207343294447647 #PROD CHANNEL = 890207343294447647   |   DEV CHANNEL = 908734633569574932
-PING = 320214798640087040
+from Utilities.constants import LoggingDefaults
 
 class Logging(commands.Cog):
     def __init__(self, bot: Bot):
@@ -16,16 +14,16 @@ class Logging(commands.Cog):
     async def log_event (self, event: str, type: str):
         print(f' {type}  [{datetime.now().strftime("%m/%d/%Y %H:%M:%S.%f")[:-3]}] - {event}')
 
-        console_channel: TextChannel = self.bot.get_channel(CHANNEL)
+        console_channel: TextChannel = self.bot.get_channel(LoggingDefaults.CHANNEL)
 
         await console_channel.send(content=f"```prolog\r\n{event}```")
 
     async def log_error (self, error, function, traceback, *args):
-        print(f' ERROR  [{datetime.now().strftime("%m/%d/%Y %H:%M:%S.%f")[:-3]}] - {NAME} encountered {error} in {function}.')
+        print(f' ERROR  [{datetime.now().strftime("%m/%d/%Y %H:%M:%S.%f")[:-3]}] - {LoggingDefaults.NAME} encountered {error} in {function}.')
 
         epoch: int = int(datetime.now().timestamp())
 
-        embed: Embed = discord.Embed(title=f"Error in {NAME}", description=error, colour=0xCC0000)
+        embed: Embed = discord.Embed(title=f"Error in {LoggingDefaults.NAME}", description=error, colour=0xCC0000)
 
         embed.add_field(name="Timestamp", value=f"<t:{epoch}:F>, <t:{epoch}:R>", inline=True)
         embed.add_field(name="Function", value=f"`{function}`", inline=True)
@@ -33,9 +31,9 @@ class Logging(commands.Cog):
         if any(args):
             embed.add_field(name="Arguments", value=f'`{args}`', inline=False)
 
-        console_channel: TextChannel = self.bot.get_channel(CHANNEL)
+        console_channel: TextChannel = self.bot.get_channel(LoggingDefaults.CHANNEL)
 
-        await console_channel.send(embed=embed, content=f"<@{PING}>")
+        await console_channel.send(embed=embed, content=f"<@{LoggingDefaults.PING}>")
 
 
 def setup(bot):
