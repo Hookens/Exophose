@@ -92,14 +92,13 @@ class HelpMethods(commands.Cog):
             "3. Allow roles to use it.\n"
             "4. Profit."
         )
-        #TODO: Fix those once able
         commands: str = (
-            f"</placeholder> - {BundleTexts.C_CREATE}\n"
-            f"</placeholder> - {BundleTexts.C_LIST}\n"
-            f"</placeholder> - {BundleTexts.C_ALLOW}\n"
-            f"</placeholder> - {BundleTexts.C_DISALLOW}\n"
-            f"</placeholder> - {BundleTexts.C_EDIT}\n"
-            f"</placeholder> - {BundleTexts.C_DELETE}\n"
+            f"</bundle create:1217257356795318382> - {BundleTexts.C_CREATE}\n"
+            f"</bundle list:1217257356795318382> - {BundleTexts.C_LIST}\n"
+            f"</bundle allow:1217257356795318382> - {BundleTexts.C_ALLOW}\n"
+            f"</bundle disallow:1217257356795318382> - {BundleTexts.C_DISALLOW}\n"
+            f"</bundle edit:1217257356795318382> - {BundleTexts.C_EDIT}\n"
+            f"</bundle delete:1217257356795318382> - {BundleTexts.C_DELETE}\n"
         )
         tips : str = (
             "- A maximum of 5 bundles can be created.\n"
@@ -116,10 +115,9 @@ class HelpMethods(commands.Cog):
     def generate_help_bundle_roles(self):
         embed = Embed(title="Bundle  •  Roles", description="Commands for bundle role selection.")
 
-        #TODO: Fix those once able
         commands: str = (
-            f"</placeholder> - {BundleTexts.C_CHOICES}\n"
-            f"</placeholder> - {BundleTexts.C_CHOOSE}\n"
+            f"</bundle choices:1217225559202074744> - {BundleTexts.C_CHOICES}\n"
+            f"</bundle choose:1217257356795318382> - {BundleTexts.C_CHOOSE}\n"
         )
 
         embed.add_field(name="Commands", value=commands, inline=False)
