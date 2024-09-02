@@ -166,7 +166,7 @@ class Verification(commands.Cog):
             if allowed_role.id == role_id:
                 return 0
 
-        if len(allowed_roles) == 5:
+        if len(allowed_roles) == 10:
             return 2
         
         return 1
@@ -207,9 +207,6 @@ class Verification(commands.Cog):
         bundle_roles: list[int] = await data.get_bundles_roles(member.guild.id)
         bundle_allowed_roles: list[int] = await data.get_bundles_choices(allowed_roles)
 
-        if not bundle_allowed_roles:
-            return False
-        
         roles_to_remove = bundle_roles if remove_all else list(set(bundle_roles) - set(bundle_allowed_roles))
         member_roles_to_remove = []
         for member_role in member.roles:

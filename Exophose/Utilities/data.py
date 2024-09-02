@@ -185,7 +185,7 @@ class Data(commands.Cog):
 
     async def get_bundles_choices(self, allowed_roles: list[BundleRole]) -> list[int]:
         if not allowed_roles:
-            return None
+            return []
 
         distinct_bundles: list[int] = list(set(role.bundle_id for role in allowed_roles))
         bundle_roles: list[BundleRole] = list()

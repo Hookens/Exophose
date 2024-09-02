@@ -134,7 +134,7 @@ class Embeds(commands.Cog):
         utilities: Utilities
         (utilities,) = self._get_cogs(include_utilities=True)
             
-        hexcolor = await utilities.parse_color(color)
+        hexcolor = await utilities.parse_color(color) if color else None
 
         if hexcolor is None:
             return self.generate_embed("Color preview", "To preview colors, you can use an [online color picker](https://www.google.com/search?q=colorpicker). Make sure to use the hexadecimal value.", EmbedDefaults.WHITE)
@@ -202,6 +202,9 @@ class Embeds(commands.Cog):
     def not_role_allowed(self, role: Role) -> Embed:
         return self.generate_embed("Permission Error", f"Exophose is unable to grant {role.mention}.")
 
+    def not_edit_allowed(self, role: Role, action: str) -> Embed:
+        return self.generate_embed("Permission Error", f"Exophose cannot {action} {role.mention} because it is too high in the hierarchy.")
+
     def not_feature_allowed(self) -> Embed:
         return self.generate_embed("Missing feature", "Your server does not have role bages unlocked as they are a level 2 boost feature.")
 
@@ -245,7 +248,7 @@ class Embeds(commands.Cog):
         return self.generate_embed("Bundle role disallow impossible", f"Exophose cannot disallow {role.mention} from the bundle as it is already disallowed.")
     
     def bundle_allowed_role_error(self, role: Role) -> Embed:
-        return self.generate_embed("Bundle role allow impossible", f"Exophose cannot allow {role.mention} in the bundle. You have reached the maximum of 5 roles.")
+        return self.generate_embed("Bundle role allow impossible", f"Exophose cannot allow {role.mention} in the bundle. You have reached the maximum of 10 roles.")
     
 
     def bundle_role_added(self, role: Role) -> Embed:

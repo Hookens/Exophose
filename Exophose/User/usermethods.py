@@ -135,7 +135,12 @@ class UserMethods(commands.Cog):
             return embeds.missing_modification_index("recolor")
         
         role: Role = ctx.guild.get_role(created_roles[role_index].id)
-        await role.edit(colour=Colour(hex_color))
+
+        try:
+            await role.edit(colour=Colour(hex_color))
+        except:
+            return embeds.not_edit_allowed(role, "recolor")
+
         return embeds.success_modification("recolor")
     
     @try_func_async(embed=True)
@@ -164,7 +169,12 @@ class UserMethods(commands.Cog):
             return embeds.missing_modification_index("rename")
         
         role: Role = ctx.guild.get_role(created_roles[role_index].id)
-        await role.edit(name=role_name)
+
+        try:
+            await role.edit(name=role_name)
+        except:
+            return embeds.not_edit_allowed(role, "rename")
+        
         return embeds.success_modification("rename")
     
     @try_func_async(embed=True)

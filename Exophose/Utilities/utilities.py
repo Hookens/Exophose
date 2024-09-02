@@ -1,3 +1,4 @@
+from discord import HTTPException
 from discord.bot import Bot
 from discord.ext import commands
 from discord.guild import Guild
@@ -73,8 +74,11 @@ class Utilities(commands.Cog):
             guild: Guild = self.bot.get_guild(created_roles[role_index].guild_id)
             role: Role = guild.get_role(created_roles[role_index].id)
 
-            if await data.delete_member_role(role.id):
-                await role.delete()
+            if await data.delete_member_role(created_roles[role_index].id):
+                try:
+                    await role.delete()
+                except:
+                    pass
                 return True
             
         return False

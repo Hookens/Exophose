@@ -102,7 +102,7 @@ class HelpMethods(commands.Cog):
         )
         tips : str = (
             "- A maximum of 5 bundles can be created.\n"
-            "- A maximum of 5 roles can be allowed per bundle.\n"
+            "- A maximum of 10 roles can be allowed per bundle.\n"
             "- A maximum of 10 roles can be added per bundle."
         )
 

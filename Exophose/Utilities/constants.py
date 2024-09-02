@@ -1,8 +1,8 @@
 class Env:
-    API_TOKEN = "DISCORD_TOKEN_EXOPHOSE"
-    DBHST = "DATABASE_HST"
-    DBUSR = "DATABASE_USR"
-    DBPWD = "DATABASE_PWD"
+    API_TOKEN = "" #PUT YOUR API TOKEN HERE
+    DBHST = "" #PUT YOUR DATABASE HOST HERE
+    DBUSR = "" #PUT YOUR DATABASE USER HERE
+    DBPWD = "" #PUT YOUR DATABASE PWD HERE
 
 class LoadOrder:
     COGS = [
@@ -26,8 +26,8 @@ class LoadOrder:
 
 class LoggingDefaults:
     NAME = "Exophose"
-    CHANNEL = 890207343294447647 #PROD CHANNEL = 890207343294447647   |   DEV CHANNEL = 908734633569574932
-    PING = 320214798640087040
+    CHANNEL = 0 #PUT YOUR LOG CHANNEL ID HERE
+    PING = 0 #PUT YOUR USER ID HERE
     COG_COUNT = len(LoadOrder.COGS)
 
 class EmbedDefaults:
@@ -53,7 +53,7 @@ class HelpDefaults:
 
 class DebugLists:
     GUILDS = [
-        858709508561436714,
+        0, #PUT YOUR DEBUG GUILD ID HERE
     ]
 
     COGS = [
@@ -145,6 +145,6 @@ class UserTexts:
     F_MEMBER = "Member to list the created roles for."
 
     DELETE_REASON = "Impossible to connect to the SQL database at the moment."
-    F_NO_PERMS = "Your guild does not support custom role badges."
-    F_NOT_ALLOWED = "You do not have badge permissions with your currently allowed role(s)."
-    F_INVALID_FILE = "The file you have provided is invalid. Make sure it's an image file type supported by discord (.png, .jpg, .webp)."
+    DF_NO_PERMS = "Your guild does not support custom role badges."
+    DF_NOT_ALLOWED = "You do not have badge permissions with your currently allowed role(s)."
+    DF_INVALID_FILE = "The file you have provided is invalid. Make sure it's an image file type supported by discord (.png, .jpg, .webp)."
