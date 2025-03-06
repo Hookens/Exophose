@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Hookens
+# See the LICENSE file in the project root for details.
+
 import traceback
 import functools
 

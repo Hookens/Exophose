@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Hookens
+# See the LICENSE file in the project root for details.
+
 from discord import SelectOption
 from discord.bot import Bot
 from discord.interactions import Interaction

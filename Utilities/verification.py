@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Hookens
+# See the LICENSE file in the project root for details.
+
 from discord import Object
 from discord.bot import Bot
 from discord.ext import commands
