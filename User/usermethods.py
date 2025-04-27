@@ -210,7 +210,10 @@ class UserMethods(commands.Cog):
         role: Role = ctx.guild.get_role(created_roles[role_index].id)
         
         if role_badge is None:
-            await role.edit(icon=None)
+            try:
+                await role.edit(icon=None)
+            except:
+                return embeds.not_edit_allowed(role, "rebadge")
             
         elif role_badge.content_type.startswith("image"):
             try:
