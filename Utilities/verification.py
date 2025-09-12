@@ -39,21 +39,21 @@ class Verification(commands.Cog):
         return True
 
     #Custom roles
-    async def is_role_allowable(self, role_id: int, guild_id: int) -> int:
+    async def is_role_allowable(self, role_id: int, guild_id: int) -> tuple[int, AllowedRole | None]:
         data: 'Data' = self.bot.get_cog("Data")
         if data is None:
-            return 3
+            return (3, None)
         
         allowed_roles: list[AllowedRole] = await data.get_allowed_roles(guild_id)
 
         for allowed_role in allowed_roles:
             if allowed_role.id == role_id:
-                return 2
+                return (2, allowed_role)
 
         if len(allowed_roles) == 20:
-            return 0
+            return (0, None)
         
-        return 1
+        return (1, None)
 
     async def is_user_role_addable(self, guild_id: int, member: Member) -> bool:
         data: 'Data' = self.bot.get_cog("Data")
@@ -108,16 +108,6 @@ class Verification(commands.Cog):
         return True
 
     async def is_user_allowed(self, member: Member) -> bool:
-        if member.guild_permissions.administrator: 
-            return True
-        
-        for role in member.roles:
-            if await self.is_role_allowable(role.id, member.guild.id) == 2:
-                return True
-
-        return False
-
-    async def is_badge_allowed(self, guild_id: int, member: Member) -> bool:
         data: 'Data' = self.bot.get_cog("Data")
         if data is None:
             return False
@@ -127,7 +117,51 @@ class Verification(commands.Cog):
         if member.guild_permissions.administrator:
             allowed = True
         else:
-            allowed_roles: list[AllowedRole] = await data.get_allowed_roles(guild_id)
+            allowed_roles: list[AllowedRole] = await data.get_allowed_roles(member.guild.id)
+
+            for allowed_role in allowed_roles:
+                for role in member.roles:
+                    if role.id == allowed_role.id:
+                        allowed = allowed_role
+                        break
+                if allowed:
+                    break
+
+        return allowed
+
+    async def is_badge_allowed(self, member: Member) -> bool:
+        data: 'Data' = self.bot.get_cog("Data")
+        if data is None:
+            return False
+        
+        allowed: bool = False
+        
+        if member.guild_permissions.administrator:
+            allowed = True
+        else:
+            allowed_roles: list[AllowedRole] = await data.get_badge_allowed_roles(member.guild.id)
+
+            for allowed_role in allowed_roles:
+                for role in member.roles:
+                    if role.id == allowed_role.id:
+                        allowed = allowed_role
+                        break
+                if allowed:
+                    break
+
+        return allowed
+
+    async def is_gradient_allowed(self, member: Member) -> bool:
+        data: 'Data' = self.bot.get_cog("Data")
+        if data is None:
+            return False
+        
+        allowed: bool = False
+        
+        if member.guild_permissions.administrator:
+            allowed = True
+        else:
+            allowed_roles: list[AllowedRole] = await data.get_gradient_allowed_roles(member.guild.id)
 
             for allowed_role in allowed_roles:
                 for role in member.roles:

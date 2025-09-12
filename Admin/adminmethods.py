@@ -35,20 +35,25 @@ class AdminMethods(commands.Cog):
             ctx: ApplicationContext,
             role: Role,
             max_roles: int,
+            allow_gradients: bool,
             allow_badges: bool) -> Embed:
         (data, embeds, verification) = self._get_cogs()
 
         if not verification.is_name_allowed(role.name):
             return embeds.blacklisted_word()
 
-        allowable = await verification.is_role_allowable(role.id, ctx.guild.id)
+        allowable, allowed_role = await verification.is_role_allowable(role.id, ctx.guild.id)
         if allowable == 0:
             return embeds.allowed_role_error(role)
         elif allowable == 1:
-            if await data.add_allowed_role(role.id, ctx.guild.id, ctx.author.id, max_roles or 1, allow_badges):
+            if await data.add_allowed_role(role.id, ctx.guild.id, ctx.author.id, max_roles or 1, allow_badges or False, allow_gradients or False):
                 return embeds.allowed_role_added(role)
         elif allowable == 2:
-            if await data.add_allowed_role(role.id, ctx.guild.id, ctx.author.id, max_roles, allow_badges):
+            print(allowed_role.max_roles, allowed_role.allow_badges, allowed_role.allow_gradients)
+            if await data.add_allowed_role(role.id, ctx.guild.id, ctx.author.id,
+                                           max_roles or allowed_role.max_roles,
+                                           allow_badges or allowed_role.allow_badges,
+                                           allow_gradients or allowed_role.allow_gradients):
                 return embeds.allowed_role_updated(role)
             
         return embeds.unexpected_sql_error()

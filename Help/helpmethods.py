@@ -55,7 +55,7 @@ class HelpMethods(commands.Cog):
             f"</allowed:1034567444758536216> - {AdminTexts.C_ALLOWED}\n"
         )
         tips: str = (
-            "- The maximum roles and whether or not a role allows badges can be edited by re-allowing it.\n"
+            "- The maximum roles and whether or not a role allows extra customization can be edited by re-allowing it.\n"
             "- A maximum of 20 roles can be allowed."
         )
         

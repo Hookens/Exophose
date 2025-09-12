@@ -83,6 +83,7 @@ class AdminTexts:
     F_ALLOWROLE = "Role to allow."
     F_DISALLOWROLE = "Role to disallow."
     F_MAX = "Maximum number of roles that a user with that role can create."
+    F_GRADIENTS = "Can use enhanced role styles."
     F_BADGES = "Can add custom badges."
     F_PUBLIC = "Make this message public."
 
@@ -139,12 +140,17 @@ class UserTexts:
 
     F_NAME = "Name for the role."
     F_COLOR = "Color for your role. Hexadecimal format only."
+    F_SECONDARY_COLOR = "Secondary color for your role. Hexadecimal format only."
+    F_HOLOGRAPHIC = "Make the role style holographic. Ignores color inputs."
     F_PREVIEW = "Color to preview. Hexadecimal format only."
-    F_BADGE = "Badge for the role."
+    F_BADGE = "Badge for your role."
     F_INDEX = "Index of the role."
     F_MEMBER = "Member to list the created roles for."
 
     DELETE_REASON = "Impossible to connect to the SQL database at the moment."
-    DF_NO_PERMS = "Your guild does not support custom role badges."
-    DF_NOT_ALLOWED = "You do not have badge permissions with your currently allowed role(s)."
+    DF_NO_BADGE_PERMS = "Your guild does not support custom role badges."
+    DF_NOT_BADGE_ALLOWED = "You do not have badge permissions with your currently allowed role(s)."
+    DF_NO_GRADIENT_PERMS = "Your guild does not support enhanced role styles."
+    DF_NOT_GRADIENT_ALLOWED = "You do not have enhanced role styles permissions with your currently allowed role(s)."
+    DF_NOT_VALID_COLOR = "Your given secondary color is not a hexadecimal number."
     DF_INVALID_FILE = "The file you have provided is invalid. Make sure it's an image file type supported by discord (.png, .jpg, .webp)."

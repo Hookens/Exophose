@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Hookens
 # See the LICENSE file in the project root for details.
 
-from discord import Attachment
+from discord import Attachment, RoleColours
 from discord.bot import Bot
 from discord.colour import Colour
 from discord.commands.context import ApplicationContext
@@ -44,6 +44,8 @@ class UserMethods(commands.Cog):
             ctx: ApplicationContext,
             role_name: str,
             role_color: str,
+            role_secondary: str,
+            role_holographic: bool,
             role_badge: Attachment) -> Embed:
         data: 'Data'
         embeds: 'Embeds'
@@ -74,13 +76,31 @@ class UserMethods(commands.Cog):
         await utilities.reposition(created_role)
         embed: Embed = embeds.creation_success()
 
+        if role_secondary is not None or role_holographic is True:
+            if "ENHANCED_ROLE_COLORS" not in ctx.guild.features:
+                embed.set_footer(text=UserTexts.DF_NO_GRADIENT_PERMS)
+            if not await verification.is_gradient_allowed(ctx.author):
+                embed.set_footer(text=UserTexts.DF_NOT_GRADIENT_ALLOWED)
+            else:
+                try:
+                    if role_holographic:
+                        await created_role.edit(holographic=True)
+                    else:
+                        hex_secondary = await utilities.parse_color(role_secondary)
+                        if hex_secondary is None:
+                            embed.set_footer(text=UserTexts.DF_NOT_VALID_COLOR)
+                        else:
+                            primary = Colour(hex_color)
+                            colors = RoleColours(primary=primary, secondary=primary, tertiary=Colour(hex_secondary))
+                            await created_role.edit(colors=colors)
+                except:
+                    pass
+
         if role_badge is not None:
             if "ROLE_ICONS" not in ctx.guild.features:
-                embed.set_footer(text=UserTexts.DF_NO_PERMS)
-
-            if not await verification.is_badge_allowed(ctx.guild.id, ctx.author):
-                embed.set_footer(text=UserTexts.DF_NOT_ALLOWED)
-
+                embed.set_footer(text=UserTexts.DF_NO_BADGE_PERMS)
+            if not await verification.is_badge_allowed(ctx.author):
+                embed.set_footer(text=UserTexts.DF_NOT_BADGE_ALLOWED)
             if not role_badge.content_type.startswith("image"):
                 embed.set_footer(text=UserTexts.DF_INVALID_FILE)
             else:
@@ -113,7 +133,9 @@ class UserMethods(commands.Cog):
     async def role_recolor (
             self, 
             ctx: ApplicationContext, 
-            role_color: str, 
+            role_color: str,
+            role_secondary: str,
+            role_holographic: bool,
             role_index: int) -> Embed:
         data: 'Data'
         embeds: 'Embeds'
@@ -139,12 +161,31 @@ class UserMethods(commands.Cog):
         
         role: Role = ctx.guild.get_role(created_roles[role_index].id)
 
+        embed = embeds.success_modification("recolor")
+
         try:
-            await role.edit(colour=Colour(hex_color))
+            primary = Colour(hex_color)
+            if role_secondary is not None or role_holographic is True:
+                if "ENHANCED_ROLE_COLORS" not in ctx.guild.features:
+                    embed.set_footer(text=UserTexts.DF_NO_GRADIENT_PERMS)
+                if not await verification.is_gradient_allowed(ctx.author):
+                    embed.set_footer(text=UserTexts.DF_NOT_GRADIENT_ALLOWED)
+                else:
+                    if role_holographic:
+                        await role.edit(holographic=True)
+                    else:
+                        hex_secondary = await utilities.parse_color(role_secondary)
+                        if hex_secondary is None:
+                            embed.set_footer(text=UserTexts.DF_NOT_VALID_COLOR)
+                        else:
+                            colors = RoleColours(primary=primary, secondary=primary, tertiary=Colour(hex_secondary))
+                            await role.edit(colors=colors)
+            else:
+                await role.edit(colour=primary)
         except:
             return embeds.not_edit_allowed(role, "recolor")
 
-        return embeds.success_modification("recolor")
+        return embed
     
     @try_func_async(embed=True)
     async def role_rename (
@@ -196,7 +237,7 @@ class UserMethods(commands.Cog):
         if not verification.has_permission(ctx.guild):
             return embeds.not_permission_allowed()
 
-        if not await verification.is_badge_allowed(ctx.guild.id, ctx.author):
+        if not await verification.is_badge_allowed(ctx.author):
             return embeds.not_badge_allowed()
         
         created_roles: list[CreatedRole] = await data.get_member_roles(ctx.guild.id, ctx.author.id)

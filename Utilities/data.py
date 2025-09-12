@@ -74,9 +74,9 @@ class Data(commands.Cog):
         await self._log_sql_event(f"Joined G'{guild_id}' with R'{role_id}'", "INFO")
         return await self._execute_write_operation("ExoAddServer", role_id, guild_id)
 
-    async def add_allowed_role(self, role_id: int, guild_id: int, user_id: int, max_roles:int, allow_badges: bool) -> bool:
-        await self._log_sql_event(f"Allowed R'{role_id}' ({max_roles}, {allow_badges}) from G'{guild_id}' by U'{user_id}'", "INFO")
-        return await self._execute_write_operation("ExoAddAllowedRole", role_id, guild_id, user_id, max_roles, allow_badges)
+    async def add_allowed_role(self, role_id: int, guild_id: int, user_id: int, max_roles:int, allow_badges: bool, allow_gradients: bool) -> bool:
+        await self._log_sql_event(f"Allowed R'{role_id}' ({max_roles}, {allow_badges}, {allow_gradients}) from G'{guild_id}' by U'{user_id}'", "INFO")
+        return await self._execute_write_operation("ExoAddAllowedRole", role_id, guild_id, user_id, max_roles, allow_badges, allow_gradients)
 
     async def add_member_role(self, role_id: int, guild_id: int, user_id: int) -> bool:
         await self._log_sql_event(f"Created R'{role_id}' from G'{guild_id}' by U'{user_id}'", "INFO")
@@ -97,6 +97,35 @@ class Data(commands.Cog):
             user_id=row[2],
             max_roles=row[3],
             allow_badges=row[7],
+            allow_gradients=row[8],
+            created_date=row[4],
+            updated_user_id=row[5],
+            updated_date=row[6]
+            ) for row in result] if result is not None else None
+
+    async def get_badge_allowed_roles(self, guild_id: int) -> list[AllowedRole]:
+        result = await self._execute_read_operation("ExoGetBadgeAllowedRoles", guild_id)
+        return [AllowedRole(
+            id=row[0],
+            guild_id=row[1],
+            user_id=row[2],
+            max_roles=row[3],
+            allow_badges=row[7],
+            allow_gradients=row[8],
+            created_date=row[4],
+            updated_user_id=row[5],
+            updated_date=row[6]
+            ) for row in result] if result is not None else None
+
+    async def get_gradient_allowed_roles(self, guild_id: int) -> list[AllowedRole]:
+        result = await self._execute_read_operation("ExoGetGradientAllowedRoles", guild_id)
+        return [AllowedRole(
+            id=row[0],
+            guild_id=row[1],
+            user_id=row[2],
+            max_roles=row[3],
+            allow_badges=row[7],
+            allow_gradients=row[8],
             created_date=row[4],
             updated_user_id=row[5],
             updated_date=row[6]

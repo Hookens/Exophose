@@ -1,6 +1,7 @@
 # Copyright (C) 2025 Hookens
 # See the LICENSE file in the project root for details.
 
+from discord import RoleColours
 from discord.activity import Activity
 from discord.bot import Bot
 from discord.enums import ActivityType
@@ -68,12 +69,19 @@ class Events(commands.Cog):
                 await utilities.delete_role(new_member, 0)
             return
 
-        if not await verification.is_badge_allowed(new_member.guild.id, new_member):
+        if not await verification.is_badge_allowed(new_member):
             created_roles: list[CreatedRole] = await data.get_member_roles(new_member.guild.id, new_member.id)
             for created_role in created_roles:
                 role: Role = new_member.guild.get_role(created_role.id)
                 if role is not None and role.icon is not None:
                     await role.edit(icon=None)
+
+        if not await verification.is_gradient_allowed( new_member):
+            created_roles: list[CreatedRole] = await data.get_member_roles(new_member.guild.id, new_member.id)
+            for created_role in created_roles:
+                role: Role = new_member.guild.get_role(created_role.id)
+                if role is not None and (role.colors.is_holographic or role.colors.secondary is not None):
+                    await role.edit(colors=RoleColours(primary=role.color))
 
     @commands.Cog.listener()
     @try_func_async()

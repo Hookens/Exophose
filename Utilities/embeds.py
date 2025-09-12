@@ -91,12 +91,14 @@ class Embeds(commands.Cog):
         for allowed_role in allowed_roles:
             ping = "**everyone**" if allowed_role.is_everyone else f"<@&{allowed_role.id}>"
             role_plural = "s" if allowed_role.max_roles > 1 else ""
-            max_roles = f"Can create **{allowed_role.max_roles}** role{role_plural}"
-            not_badges = "" if allowed_role.allow_badges else "not"
-            allow_badges = f"**Can{not_badges}** add custom badges"
+            max_roles = f"**{allowed_role.max_roles}** role{role_plural}"
+            not_badges = ":white_check_mark:" if allowed_role.allow_badges else ":no_entry_sign:"
+            not_gradients = ":white_check_mark:" if allowed_role.allow_gradients else ":no_entry_sign:"
+            allow_badges = f"{not_badges} custom badges"
+            allow_gradients = f"{not_gradients} enhanced role styles"
             allowed_by = f"Allowed by <@{allowed_role.user_id}> on **<t:{int(allowed_role.created_date.timestamp())}>**"
             updated_by = f"\nLast update by <@{allowed_role.updated_user_id}> on **<t:{int(allowed_role.updated_date.timestamp())}>**" if allowed_role.updated_user_id is not None else ""
-            field = f"{ping} | {max_roles} | {allow_badges}\n{allowed_by}{updated_by}"
+            field = f"{ping} | {max_roles} | {allow_gradients} | {allow_badges}\n{allowed_by}{updated_by}"
 
             embed.add_field(name="\u200b", value=field, inline=False)
 
@@ -162,7 +164,6 @@ class Embeds(commands.Cog):
 
         embed.set_thumbnail(url=message.attachments[0].url)
 
-        await message.delete()
         os.remove(file)
 
     def success_modification(self, action: str) -> Embed:
@@ -177,7 +178,7 @@ class Embeds(commands.Cog):
 
     #Errors
     def color_parsing_error(self) -> Embed:
-        return self.generate_embed("Parsing error", f"Exophose cannot parse the given color as it is either not a hexadecimal number or not between #000000 and #FFFFFF.")
+        return self.generate_embed("Parsing error", f"Exophose cannot parse the given color as it is not a hexadecimal number.")
 
     def unexpected_error(self) -> Embed:
         return self.generate_embed("Unexpected Error", f"Exophose encountered an unexpected error.")

@@ -52,12 +52,14 @@ class UserCommands(commands.Cog):
             ctx: ApplicationContext,
             name: Option(str, UserTexts.F_NAME, max_length=100, required=True),
             color: Option(str, UserTexts.F_COLOR, max_length=7, required=True),
+            secondary_color: Option(str, UserTexts.F_SECONDARY_COLOR, max_length=7, required=False) = None,
+            holographic: Option(bool, UserTexts.F_HOLOGRAPHIC, default=True, required=False) = False,
             badge: Option(SlashCommandOptionType.attachment, UserTexts.F_BADGE, required=False) = None):
         methods: 'UserMethods'
         (methods,) = self._get_cogs(include_methods=True)
 
         if await self.allowed(ctx):
-            await ctx.interaction.followup.send(embed=await methods.role_create(ctx, name, color, badge))
+            await ctx.interaction.followup.send(embed=await methods.role_create(ctx, name, color, secondary_color, holographic, badge))
 
     @commands.slash_command(name="remove", description=UserTexts.C_REMOVE, guild_only=True)
     @try_func_async()
@@ -77,12 +79,14 @@ class UserCommands(commands.Cog):
             self,
             ctx: ApplicationContext,
             color: Option(str, UserTexts.F_COLOR, max_length=7, required=True),
+            secondary_color: Option(str, UserTexts.F_SECONDARY_COLOR, max_length=7, required=False) = None,
+            holographic: Option(bool, UserTexts.F_HOLOGRAPHIC, default=True, required=False) = False,
             index: Option(int, UserTexts.F_INDEX, min_value=0, max_value=19, required=False) = 0):
         methods: 'UserMethods'
         (methods,) = self._get_cogs(include_methods=True)
 
         if await self.allowed(ctx):
-            await ctx.interaction.followup.send(embed=await methods.role_recolor(ctx, color, index))
+            await ctx.interaction.followup.send(embed=await methods.role_recolor(ctx, color, secondary_color, holographic, index))
 
     @commands.slash_command(name="rename", description=UserTexts.C_RENAME, guild_only=True)
     @try_func_async()

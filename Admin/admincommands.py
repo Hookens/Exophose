@@ -28,13 +28,14 @@ class AdminCommands(commands.Cog):
             self,
             ctx: ApplicationContext,
             role: Option(Role, AdminTexts.F_ALLOWROLE, required=True),
-            max_roles: Option(int, AdminTexts.F_MAX, min_value=1, max_value=20, required=False) = 0,
-            allow_badges: Option(bool, AdminTexts.F_BADGES, required=False) = False):
+            max_roles: Option(int, AdminTexts.F_MAX, min_value=1, max_value=20, required=False),
+            allow_gradients: Option(bool, AdminTexts.F_GRADIENTS, required=False),
+            allow_badges: Option(bool, AdminTexts.F_BADGES, required=False)):
         await ctx.interaction.response.defer(ephemeral=True)
         
         methods: 'AdminMethods'
         if (methods := self.bot.get_cog("AdminMethods")) is not None:
-            await ctx.interaction.followup.send(embed=await methods.allow_role(ctx, role, max_roles, allow_badges))
+            await ctx.interaction.followup.send(embed=await methods.allow_role(ctx, role, max_roles, allow_gradients, allow_badges))
 
     @commands.slash_command(name="disallow", description=AdminTexts.C_DISALLOW, guild_only=True)
     @discord.default_permissions(administrator=True,)
