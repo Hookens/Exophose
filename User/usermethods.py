@@ -65,7 +65,7 @@ class UserMethods(commands.Cog):
         hex_color = await utilities.parse_color(role_color)
 
         if hex_color is None:
-            return embeds.color_parsing_error(role_color)
+            return embeds.color_parsing_error()
         
         created_role: Role = await ctx.guild.create_role(name=role_name,colour=Colour(hex_color))
         if not await data.add_member_role(created_role.id, ctx.guild.id, ctx.author.id):
@@ -76,10 +76,10 @@ class UserMethods(commands.Cog):
         await utilities.reposition(created_role)
         embed: Embed = embeds.creation_success()
 
-        if role_secondary is not None or role_holographic is True:
+        if role_secondary or role_holographic is True:
             if "ENHANCED_ROLE_COLORS" not in ctx.guild.features:
                 embed.set_footer(text=UserTexts.DF_NO_GRADIENT_PERMS)
-            if not await verification.is_gradient_allowed(ctx.author):
+            elif not await verification.is_gradient_allowed(ctx.author):
                 embed.set_footer(text=UserTexts.DF_NOT_GRADIENT_ALLOWED)
             else:
                 try:
@@ -96,12 +96,12 @@ class UserMethods(commands.Cog):
                 except:
                     pass
 
-        if role_badge is not None:
+        if role_badge:
             if "ROLE_ICONS" not in ctx.guild.features:
                 embed.set_footer(text=UserTexts.DF_NO_BADGE_PERMS)
-            if not await verification.is_badge_allowed(ctx.author):
+            elif not await verification.is_badge_allowed(ctx.author):
                 embed.set_footer(text=UserTexts.DF_NOT_BADGE_ALLOWED)
-            if not role_badge.content_type.startswith("image"):
+            elif not role_badge.content_type.startswith("image"):
                 embed.set_footer(text=UserTexts.DF_INVALID_FILE)
             else:
                 try:
@@ -165,10 +165,12 @@ class UserMethods(commands.Cog):
 
         try:
             primary = Colour(hex_color)
-            if role_secondary is not None or role_holographic is True:
+            await role.edit(colour=primary)
+
+            if role_secondary or role_holographic is True:
                 if "ENHANCED_ROLE_COLORS" not in ctx.guild.features:
                     embed.set_footer(text=UserTexts.DF_NO_GRADIENT_PERMS)
-                if not await verification.is_gradient_allowed(ctx.author):
+                elif not await verification.is_gradient_allowed(ctx.author):
                     embed.set_footer(text=UserTexts.DF_NOT_GRADIENT_ALLOWED)
                 else:
                     if role_holographic:
@@ -180,8 +182,6 @@ class UserMethods(commands.Cog):
                         else:
                             colors = RoleColours(primary=primary, secondary=primary, tertiary=Colour(hex_secondary))
                             await role.edit(colors=colors)
-            else:
-                await role.edit(colour=primary)
         except:
             return embeds.not_edit_allowed(role, "recolor")
 

@@ -40,12 +40,12 @@ class Utilities(commands.Cog):
         hexcolor = color.replace('#', '')
 
         if not self.parsable_color(hexcolor):
-            return 0
+            return None
         
         intcolor = int(hexcolor, 16)
-        if intcolor > 0xFFFFFF or intcolor < 0:
-            intcolor = 0
-        elif intcolor == 0:
+        if intcolor > 0xFFFFFF:
+            intcolor = 0xFFFFFF
+        elif intcolor <= 0:
             intcolor = 0x010101
         
         return intcolor

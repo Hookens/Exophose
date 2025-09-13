@@ -124,7 +124,8 @@ class Embeds(commands.Cog):
             index = f"Index: `{i}`"
             ping = f"<@&{role.id}>"
             hexstrcolor = "{0:#0{1}x}".format(role.colour.value, 8)[2:]
-            color = f"Color: `#{hexstrcolor}`"
+            hexstrseccolor = "{0:#0{1}x}".format(role.colors.secondary.value, 8)[2:] if role.colors.secondary else None
+            color = "`Holographic`" if (role.colors.tertiary and role.colors.is_holographic) else f"`#{hexstrcolor}` -> `{hexstrseccolor}`" if hexstrseccolor else f"`#{hexstrcolor}`"
             badge = f" | [View badge]({role.icon.url})" if role.icon is not None else ""
             created_date = f"Created on **<t:{int(created_role.created_date.timestamp())}>**"
             field = f"{index} | {ping} | {color}{badge}\n{created_date}"
