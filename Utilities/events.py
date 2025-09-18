@@ -74,14 +74,20 @@ class Events(commands.Cog):
             for created_role in created_roles:
                 role: Role = new_member.guild.get_role(created_role.id)
                 if role is not None and role.icon is not None:
-                    await role.edit(icon=None)
+                    try:
+                        await role.edit(icon=None)
+                    except:
+                        pass
 
         if not await verification.is_gradient_allowed( new_member):
             created_roles: list[CreatedRole] = await data.get_member_roles(new_member.guild.id, new_member.id)
             for created_role in created_roles:
                 role: Role = new_member.guild.get_role(created_role.id)
                 if role is not None and (role.colors.is_holographic or role.colors.secondary is not None):
-                    await role.edit(colors=RoleColours(primary=role.color))
+                    try:
+                        await role.edit(colors=RoleColours(primary=role.color))
+                    except:
+                        pass
 
     @commands.Cog.listener()
     @try_func_async()

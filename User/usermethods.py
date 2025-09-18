@@ -91,7 +91,7 @@ class UserMethods(commands.Cog):
                             embed.set_footer(text=UserTexts.DF_NOT_VALID_COLOR)
                         else:
                             primary = Colour(hex_color)
-                            colors = RoleColours(primary=primary, secondary=primary, tertiary=Colour(hex_secondary))
+                            colors = RoleColours(primary=primary, secondary=Colour(hex_secondary))
                             await created_role.edit(colors=colors)
                 except:
                     pass
@@ -180,7 +180,7 @@ class UserMethods(commands.Cog):
                         if hex_secondary is None:
                             embed.set_footer(text=UserTexts.DF_NOT_VALID_COLOR)
                         else:
-                            colors = RoleColours(primary=primary, secondary=primary, tertiary=Colour(hex_secondary))
+                            colors = RoleColours(primary=primary, secondary=Colour(hex_secondary))
                             await role.edit(colors=colors)
         except:
             return embeds.not_edit_allowed(role, "recolor")

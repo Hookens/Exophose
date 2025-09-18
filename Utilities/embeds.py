@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.member import Member
 from discord.role import Role
 from discord.file import File
-from PIL import Image, ImageDraw, ImageFilter
+#from PIL import Image, ImageDraw, ImageFilter
 import requests
 
 from Debug.debughelpers import try_func_async
@@ -148,24 +148,26 @@ class Embeds(commands.Cog):
         hexstrcolor : str = "{0:#0{1}x}".format(hexcolor, 8)[2:]
         embed = self.generate_embed(f"Color preview for #{hexstrcolor}", "If you want to preview other colors, you can use an [online color picker](https://www.google.com/search?q=colorpicker). Make sure to use the hexadecimal value.", hexcolor)
         
-        img = Image.new('RGB', (300, 300), tuple(int(hexstrcolor[i:i+2], 16) for i in (0, 2, 4)))
+        #img = Image.new('RGB', (300, 300), tuple(int(hexstrcolor[i:i+2], 16) for i in (0, 2, 4)))
 
-        if (avatar := member.guild_avatar or member.avatar) is not None:
-            avatarpath256 = avatar.url.replace("size=1024", "size=256")
-            pfp = Image.open(requests.get(avatarpath256, stream=True).raw)
-            mask = Image.new("L", pfp.size, 0)
-            draw = ImageDraw.Draw(mask)
-            draw.ellipse((0, 0, 255, 255), fill=255)
-            img.paste(pfp, (22, 22), mask.filter(ImageFilter.GaussianBlur(3)))
-        
-        file = f"./temp/{member.id}_{hex(hexcolor)[2:]}.jpg"
-        img.save(file, quality=100)
+        #if (avatar := member.guild_avatar or member.avatar) is not None:
+        #    avatarpath256 = avatar.url.replace("size=1024", "size=256")
+        #    pfp = Image.open(requests.get(avatarpath256, stream=True).raw)
+        #    mask = Image.new("L", pfp.size, 0)
+        #    draw = ImageDraw.Draw(mask)
+        #    draw.ellipse((0, 0, 255, 255), fill=255)
+        #    img.paste(pfp, (22, 22), mask.filter(ImageFilter.GaussianBlur(3)))
+        #
+        #file = f"./temp/{member.id}_{hex(hexcolor)[2:]}.jpg"
+        #img.save(file, quality=100)
 
-        message: Message = await self.bot.get_channel(EmbedDefaults.TEMP_IMG_CHANNEL).send(file=File(file))
+        #message: Message = await self.bot.get_channel(EmbedDefaults.TEMP_IMG_CHANNEL).send(file=File(file))
 
-        embed.set_thumbnail(url=message.attachments[0].url)
+        #embed.set_thumbnail(url=message.attachments[0].url)
 
-        os.remove(file)
+        #os.remove(file)
+
+        return embed
 
     def success_modification(self, action: str) -> Embed:
         return self.generate_embed(f"Role {action} success", f"Exophose successfully {action}{'d' if action.endswith('e') else 'ed'} your role.", EmbedDefaults.GREEN)
