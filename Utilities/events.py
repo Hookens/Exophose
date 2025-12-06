@@ -83,7 +83,7 @@ class Events(commands.Cog):
             created_roles: list[CreatedRole] = await data.get_member_roles(new_member.guild.id, new_member.id)
             for created_role in created_roles:
                 role: Role = new_member.guild.get_role(created_role.id)
-                if role is not None and (role.colors.secondary is not None or role.colors.is_holographic):
+                if role is not None and role.colors.secondary is not None:
                     try:
                         await role.edit(colors=RoleColours(primary=role.color))
                     except:
