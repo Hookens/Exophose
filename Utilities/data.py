@@ -213,7 +213,7 @@ class Data(commands.Cog):
 
     async def get_bundles_roles(self, guild_id: int) -> list[int]:
         result = await self._execute_read_operation("ExoGetBundlesRoles", guild_id)
-        return [int(row[0]) for row in result] if result is not None else None
+        return [int(row[1]) for row in result] if result is not None else None
 
     async def get_bundles_choices(self, allowed_roles: list[BundleRole]) -> list[int]:
         if not allowed_roles:
