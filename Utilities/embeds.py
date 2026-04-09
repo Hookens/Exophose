@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Hookens
+# Copyright (C) 2026 Hookens
 # See the LICENSE file in the project root for details.
 
 import os

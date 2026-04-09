@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Hookens
+# Copyright (C) 2026 Hookens
 #
 #
 # This program is free software: you can redistribute it and/or modify
