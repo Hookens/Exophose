@@ -44,29 +44,33 @@ class Data(commands.Cog):
             await logging.log_error("'SQLError'", f"Data - {method}", e, *args)
 
     async def _execute_write_operation(self, proc_name: str, *args) -> bool:
+        connection = self._get_db_connection()
+        cursor = connection.cursor()
         try:
-            with self._get_db_connection() as connection:
-                with connection.cursor() as cursor:
-                    cursor.callproc(proc_name, args)
-                    connection.commit()
-                    return True
-                
+            cursor.callproc(proc_name, args)
+            connection.commit()
+            return True
         except Exception as e:
             await self._log_sql_error(e, proc_name, *args)
             return False
+        finally:
+            cursor.close()
+            connection.close()
 
     async def _execute_read_operation(self, proc_name: str, *args):
+        connection = self._get_db_connection()
+        cursor = connection.cursor()
         try:
-            with self._get_db_connection() as connection:
-                with connection.cursor() as cursor:
-                    cursor.callproc(proc_name, args)
-                    for result in cursor.stored_results():
-                        allowed_roles=result.fetchall()
-                    return allowed_roles
-                
+            cursor.callproc(proc_name, args)
+            for result in cursor.stored_results():
+                allowed_roles = result.fetchall()
+            return allowed_roles
         except Exception as e:
             await self._log_sql_error(e, proc_name, *args)
             return None
+        finally:
+            cursor.close()
+            connection.close()
 
 
     #Custom roles
