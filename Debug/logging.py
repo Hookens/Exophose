@@ -27,10 +27,10 @@ class Logging(commands.Cog):
         epoch: int = int(datetime.now().timestamp())
 
         embed: Embed = discord.Embed(title=f"Error in {LoggingDefaults.NAME}", description=error, colour=0xCC0000)
-
+        
         embed.add_field(name="Timestamp", value=f"<t:{epoch}:F>, <t:{epoch}:R>", inline=True)
         embed.add_field(name="Function", value=f"`{function}`", inline=True)
-        embed.add_field(name="Traceback", value=f'`{traceback}`', inline=False)
+        embed.add_field(name="Traceback", value=f'`{traceback[:1000]}`', inline=False)
         if any(args):
             embed.add_field(name="Arguments", value=f'`{args}`', inline=False)
 
